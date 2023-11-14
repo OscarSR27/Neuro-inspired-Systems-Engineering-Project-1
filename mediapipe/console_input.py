@@ -1,6 +1,5 @@
 #%%
 # imports
-import numpy as np
 from shared_memory_dict import SharedMemoryDict
 import time
 

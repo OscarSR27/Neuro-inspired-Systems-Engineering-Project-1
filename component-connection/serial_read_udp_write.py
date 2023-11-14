@@ -1,7 +1,6 @@
 # %%
 # imports
 import serial
-import numpy as np
 from shared_memory_dict import SharedMemoryDict
 import time
 import socket
@@ -91,35 +90,11 @@ def decode_braille(force_array):
     return number
 
 
-def send_array_udp(intensity, number_vibros): #multiplicate all values in vib array with 255 and make them feelable!
+def send_array_udp(intensity):
         '''
         Send intensity array through UDP to ESP32 with vibromotors
         '''
-        line = ''
-        j = 0
-        dash_or_no_dash = False
-        while j < number_vibros: # go through all vibros
-            scaled_intensity = int(intensity[j]/9*255) #scaled to fit 8-bit transport
-            if scaled_intensity > 255: 
-                scaled_intensity = 255
-            new_string_element = str(scaled_intensity) 
-            if dash_or_no_dash == True: 
-                line = line + '_' 
-            else: 
-                dash_or_no_dash = True
-
-            if (len(new_string_element) == 3):
-                line = line + new_string_element
-            
-            elif (len(new_string_element) == 2):
-                line = line + '0' + new_string_element
-            
-            elif (len(new_string_element) == 1):
-                line = line + '00' + new_string_element
-            
-            elif (len(new_string_element) == 0):
-                line = line + '000'
-            j += 1
+        line = ''.join(str(x) for x in intensity)
         line = line + '\n'
 
         # send through UDP
@@ -130,12 +105,12 @@ def send_array_udp(intensity, number_vibros): #multiplicate all values in vib ar
 
 
 def receive_array_serial(msg):
-    force_array = [0,0,0,0]
-    # TODO check how message will look like
-    split_msg = msg.split('_')
-    force_array = [int(x) for x in split_msg]
-
-    return force_array
+    try:
+        force_array = [int(x) for x in msg]
+        return force_array
+    except ValueError as e:
+        print(f"Error: {e}. The string contains non-integer characters.")
+        return [0,0,0,0]
 
 #%% 
 # send and receive loop
@@ -154,7 +129,7 @@ while True:
     if smd['signed_number'] is not None:
         # send number
         intensity_array = encode_braille(smd['signed_number'])
-        send_array_udp(intensity_array, number_vibros)
+        send_array_udp(intensity_array)
         # reset variables
         intensity_array = [0,0,0,0]
         smd['signed_number'] = None
