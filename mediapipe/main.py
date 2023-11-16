@@ -4,7 +4,13 @@ import time
 import os
 import HandTrackingModule as htm
 from HandTrackingModule import most_frequent
+from shared_memory_dict import SharedMemoryDict
 
+# shared memory for MediaPipe and force sensors
+smd = SharedMemoryDict(name='msg', size=1024)
+# TODO decide which variables are necessary
+smd['signed_number'] = None
+smd['pressed_number'] = None
 
 wCam, hCam = 1920, 1080
 
@@ -93,9 +99,14 @@ while True:
         counter = counter + 1
 
         if counter >= 50:
-            print("most freq:", most_frequent(summed_list))
+            number = most_frequent(summed_list)
+            # set shared memory variable
+            if smd['signed_number'] == None:
+                smd['signed_number'] = number
+                print('number sent')
+            print("most freq:", number)
             cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
-            cv2.putText(img, "Number sent: {} ".format(most_frequent(summed_list)), (60, 650), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 128), 8)
+            cv2.putText(img, "Number sent: {} ".format(number), (60, 650), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 128), 8)
             cv2.putText(img,"Get ready to show a new number", (60, 375), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 0), 8)
             cv2.imshow("Image", img)
             cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
