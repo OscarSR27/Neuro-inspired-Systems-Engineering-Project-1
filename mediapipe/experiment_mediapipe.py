@@ -8,35 +8,36 @@ import HandTrackingModule as htm
 from HandTrackingModule import most_frequent
 from shared_memory_dict import SharedMemoryDict
 
-# Experiment details
-subject_id = 5      # change it for every participant
+
+#------------------------------- EXPERIMENTAL DETAILS:-------------------------------------------------------------------
+subject_id = 10      # change it for every participant
+
+# sample conditions -- how big is the current sample size
 sample_array = [5, 10, 15, 20]
 sample_array = random.sample(sample_array, len(sample_array))
-time_duration = 120    # This is the time for running one experiment
+time_duration = 2    # This is the time for running one experiment
 
-#loop through every sample value for each participant
+#------------------------------- EXPERIMENTAL DETAILS -------------------------------------------------------------------
+
+#loop through every sample value from the sample array for each participant
 for i in range(len(sample_array)):
-    # # shared memory for MediaPipe and force sensors
-    # smd = SharedMemoryDict(name='msg', size=1024)
-    # # TODO decide which variables are necessary
-    # smd['signed_number'] = None
-    # smd['pressed_number'] = None
-
     wCam, hCam = 1920, 1080
 
     cap = cv2.VideoCapture(0)
     cap.set(3, wCam)
     cap.set(4, hCam)
 
-
     detector = htm.handDetector(detectionCon=1)
-
+    #tip ids for mediapipe fingertip detection
     tipIds = [4, 8, 12, 16, 20]
     sum = 0
     summed_list = []
+    #samples that have been already collected
     samples = 0
+    #how many numbers have been signed already
     sending_counter = 0
 
+    
     true_numbers = np.random.randint(10, size=600)
     signed_numbers = np.zeros_like(true_numbers)
     start_time = time.time()  # Start recording time
@@ -121,13 +122,18 @@ for i in range(len(sample_array)):
                 cv2.imshow("Image", img)
                 cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
                 cv2.waitKey(0)
+                # reset samples back to 0
                 samples = 0
+                # reset summed list
                 summed_list = []
                 # if sending_counter == len(true_numbers)-1: #if all n numbers have been collected
                 print(time.time() - start_time)
                 if time.time() - start_time >= time_duration:
                     signed_numbers[sending_counter] = number
-                    experiment_details_path = os.path.join("..", "Experiment_data", "subject_id{}_sample_size{}.csv".format(subject_id,sample_array[i]))
+                    directory = os.path.join("..","data","Mediapipe_Experiment_data")
+                    if not os.path.exists(directory):
+                        os.makedirs(directory)
+                    experiment_details_path = os.path.join("..","data","Mediapipe_Experiment_data", "subject_id{}_sample_size{}.csv".format(subject_id,sample_array[i]))
                     cut_idx = sending_counter + 1
                     true_numbers = true_numbers[0:cut_idx]
                     signed_numbers = signed_numbers[0:cut_idx]
@@ -136,7 +142,8 @@ for i in range(len(sample_array)):
                     df = pd.DataFrame(dict)
                     df.to_csv(experiment_details_path, index = False)
 
-                    if len(sample_array) == (i+1):
+                    # this if else is just for displaying text to know if recording of n numbers is done or if to continue... only
+                    if len(sample_array) == (i+1): #all samples don't run into display error // show press enter to quit.. can be probably deleted since we finish recording when the time is over
                         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.putText(img, "recording participant {} finished".format(subject_id), (60, 375),
                                     cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 0), 8)
@@ -146,7 +153,7 @@ for i in range(len(sample_array)):
                         cv2.waitKey(0)
 
                         break
-                    else:
+                    else: # press enter as fast as possible to "send"/save more numbers in the signed array
                         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.putText(img, "Press enter to start a new recording with {} samples".format(sample_array[i+1])
                                     , (60, 375), cv2.FONT_HERSHEY_PLAIN, 2.5, (0, 0, 0),8)
@@ -154,6 +161,7 @@ for i in range(len(sample_array)):
                         cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.waitKey(0)
                         break
+                # in case the time is not over, we can add values
                 else:
                     signed_numbers[sending_counter] = number
                     sending_counter = sending_counter + 1
@@ -182,8 +190,6 @@ for i in range(len(sample_array)):
 
         cv2.waitKey(1)
 
-        # if time.time() - start_time > time_duration:    # break out of loop if 2 minutes have passed
-        #     break
-
+    print(signed_numbers)
     # dict = {"True numbers": true_numbers, "Signed Numbers": signed_numbers}
     # np.save(experiment_details, dict)
