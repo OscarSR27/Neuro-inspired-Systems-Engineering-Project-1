@@ -8,17 +8,14 @@ import HandTrackingModule as htm
 from HandTrackingModule import most_frequent
 from shared_memory_dict import SharedMemoryDict
 
-
 #------------------------------- EXPERIMENTAL DETAILS:-------------------------------------------------------------------
 subject_id = 10      # change it for every participant
+time_duration = 120    # This is the time for running one experiment
+#------------------------------------------------------------------------------------------------------------------------
 
 # sample conditions -- how big is the current sample size
 sample_array = [5, 10, 15, 20]
 sample_array = random.sample(sample_array, len(sample_array))
-time_duration = 2    # This is the time for running one experiment
-
-#------------------------------- EXPERIMENTAL DETAILS -------------------------------------------------------------------
-
 #loop through every sample value from the sample array for each participant
 for i in range(len(sample_array)):
     wCam, hCam = 1920, 1080
@@ -30,18 +27,20 @@ for i in range(len(sample_array)):
     detector = htm.handDetector(detectionCon=1)
     #tip ids for mediapipe fingertip detection
     tipIds = [4, 8, 12, 16, 20]
+    #sum the extended fingers
     sum = 0
+    #collect the samples in the summed_list and later take the most frequent instance of the array
     summed_list = []
     #samples that have been already collected
     samples = 0
     #how many numbers have been signed already
     sending_counter = 0
 
-    
+    #generat array with enough random numbers between 0-10
     true_numbers = np.random.randint(10, size=600)
+    #initialize array to collect signed values
     signed_numbers = np.zeros_like(true_numbers)
     start_time = time.time()  # Start recording time
-
 
     while True:
         success, img = cap.read()
@@ -101,49 +100,53 @@ for i in range(len(sample_array)):
                 # Count finger for two hand
                 fingers_count_two = fingers_list_two.count(1)
 
-
             if two_hands:
-                sum = fingers_count_one + fingers_count_two
+                sum = fingers_count_one + fingers_count_two     # sum both hands
             else:
-                sum = fingers_count_one
+                sum = fingers_count_one     # sum one hand
             summed_list.append(sum)
             samples = samples + 1
 
-            if samples >= sample_array[i]:
-                number = most_frequent(summed_list)
-                signed_numbers[sending_counter] = number
-                # # set shared memory variable
-                # if smd['signed_number'] == None:
-                #     smd['signed_number'] = number
-                #     print('number sent')
+            if samples >= sample_array[i]:  # if enough samples are collected send the number
+                number = most_frequent(summed_list)     # find the most frequent number from all samples taken
+                signed_numbers[sending_counter] = number    #save the number in the signed number array
+
+                #Plot on screen
                 cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
                 cv2.putText(img, "Number sent: {} ".format(number), (60, 650), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 128), 8)
                 cv2.putText(img,"Get ready to show a new number", (60, 375), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 0), 8)
                 cv2.imshow("Image", img)
                 cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
                 cv2.waitKey(0)
+
                 # reset samples back to 0
                 samples = 0
                 # reset summed list
                 summed_list = []
-                # if sending_counter == len(true_numbers)-1: #if all n numbers have been collected
-                print(time.time() - start_time)
-                if time.time() - start_time >= time_duration:
+                if time.time() - start_time >= time_duration:   #check for time if 2 min have passed
                     signed_numbers[sending_counter] = number
+                    #create path
                     directory = os.path.join("..","data","Mediapipe_Experiment_data")
+                    #check if folder exists and create one if not
                     if not os.path.exists(directory):
                         os.makedirs(directory)
-                    experiment_details_path = os.path.join("..","data","Mediapipe_Experiment_data", "subject_id{}_sample_size{}.csv".format(subject_id,sample_array[i]))
+                    #create path for the CSV files
+                    experiment_details_path = os.path.join("..","data","Mediapipe_Experiment_data",
+                                                           "subject_id{}_sample_size{}.csv".format(subject_id, sample_array[i]))
+                    #cut index for how many numbers the participants signed
                     cut_idx = sending_counter + 1
+                    #cut both arrays
                     true_numbers = true_numbers[0:cut_idx]
                     signed_numbers = signed_numbers[0:cut_idx]
+                    #create dict to store both arrays
                     dict = {"ground_truth": true_numbers, "response": signed_numbers}
-                    # np.save(experiment_details_path, dict)
+
+                    #save file as CSV
                     df = pd.DataFrame(dict)
                     df.to_csv(experiment_details_path, index = False)
 
-                    # this if else is just for displaying text to know if recording of n numbers is done or if to continue... only
-                    if len(sample_array) == (i+1): #all samples don't run into display error // show press enter to quit.. can be probably deleted since we finish recording when the time is over
+                    # Conditional for displaying text to know if recording of n numbers is done or if to continue...
+                    if len(sample_array) == (i+1): # all samples don't run into display error // show press enter to quit..
                         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.putText(img, "recording participant {} finished".format(subject_id), (60, 375),
                                     cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 0), 8)
@@ -151,8 +154,8 @@ for i in range(len(sample_array)):
                         cv2.imshow("Image", img)
                         cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.waitKey(0)
-
                         break
+
                     else: # press enter as fast as possible to "send"/save more numbers in the signed array
                         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.putText(img, "Press enter to start a new recording with {} samples".format(sample_array[i+1])
@@ -176,20 +179,10 @@ for i in range(len(sample_array)):
         cv2.putText(img, str(true_numbers[sending_counter]), (1040, 375), cv2.FONT_HERSHEY_PLAIN, 8, (0, 0, 128), 20)
         cv2.putText(img, "Sign:", (1035, 175), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 3)
 
-        # cTime = time.time()
-        # fps = 1 / (cTime - pTime)
-        # pTime = cTime
-        #
-        # #display FPS inside the frame
         cv2.putText(img, f'second =: {int(time.time() - start_time)}', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 128), 3)
 
         cv2.imshow("Image", img)
 
         if cv2.waitKey(1) == 13:
             break
-
         cv2.waitKey(1)
-
-    print(signed_numbers)
-    # dict = {"True numbers": true_numbers, "Signed Numbers": signed_numbers}
-    # np.save(experiment_details, dict)
