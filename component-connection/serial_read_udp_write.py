@@ -7,7 +7,7 @@ import socket
 
 #%% 
 # UDP setup
-UDP_ESP32 = "192.168.4.3"
+UDP_ESP32 = "192.168.4.1"
 UDP_PORT = 9999
 MESSAGE = "000_000_000_000"  
 print("UDP target IP: %s" % UDP_ESP32)
@@ -15,12 +15,12 @@ print("UDP target port: %s" % UDP_PORT)
 print("message: %s" % MESSAGE)
 
 # uncomment for testing
-# sock = socket.socket(socket.AF_INET, # Internet
-#                        socket.SOCK_DGRAM) # UDP
+sock = socket.socket(socket.AF_INET, # Internet
+                     socket.SOCK_DGRAM) # UDP
 
 #%% 
 # Serial connection
-port = serial.Serial('COM10', baudrate=512000) # set right port
+port = serial.Serial('COM6', baudrate=512000) # set right port
 
 #%% 
 # parameters
@@ -98,7 +98,7 @@ def send_array_udp(intensity):
         line = line + '\n'
 
         # send through UDP
-        # sock.sendto(line.encode(), (UDP_IP, UDP_PORT))
+        sock.sendto(line.encode(), (UDP_ESP32, UDP_PORT))
         print('message:', line.encode(), 'UDP ip:', UDP_ESP32, 'UDP port:', UDP_PORT)
         j = 0
         #time.sleep(0.5)
@@ -116,11 +116,12 @@ def receive_array_serial(msg):
 # send and receive loop
 while True:
     # Get the message from ESP32 with force sensors
-    #msg = port.readline()
-    msg = None
+    msg = port.readline().decode('utf-8').rstrip()
+    #msg = None
 
     # translate force sensor values into number
     if msg:
+        print(msg)
         force_array = receive_array_serial(msg)
         smd['pressed_number'] = decode_braille(force_array)
         print('Number received:', smd['pressed_number'])
