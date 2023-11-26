@@ -150,6 +150,9 @@ const char * ssid = " ESP32_for_IMU ";
 const char * password = " ICSESP32IMU ";
 int motor_selection = 0;
 bool m1,m2,m3,m4 = false;
+unsigned long init_time;
+unsigned long current_time;
+bool first_iteration = true;
 
 void vibration_control (int motor_1,int motor_2,int motor_3,int motor_4);
 
@@ -170,54 +173,74 @@ std::uniform_int_distribution<> distrib(0, 9);
 int trials = 0;
 void loop ()
 {
+  if(first_iteration)
+  {
+    init_time = millis();
+    first_iteration = false;
+  }
+  current_time = millis();
   // Define the distribution for integers between 0 and 9
   std::uniform_int_distribution<> distrib(0, 9);
   
   // Generate a random number
   int randomNumber = distrib(gen);
-  
-  if (Serial.available() > 0) 
-  {
-    char inputChar = Serial.read(); // Read a character from the serial input
-    Serial.println(inputChar);
-    if (inputChar == 'n')
-    {
-      Serial.println("Motors");
-      Serial.flush();
-      results[trials][0] = braille_codes_dec[randomNumber]; // Convert 1 char to integer
-      
-      m1 = braille_codes[randomNumber][0] - '0'; // Convert 1 char to integer
-      m2 = braille_codes[randomNumber][1] - '0'; // Convert 2 char to integer
-      m3 = braille_codes[randomNumber][2] - '0'; // Convert 3 char to integer
-      m4 = braille_codes[randomNumber][3] - '0'; // Convert 4 char to integer
-  
-      vibration_control(m1,m2,m3,m4);
 
-      int count = 0;
-      Serial.flush();
-      char inputChar = Serial.read();
-      while(count < 1)
+  if ((current_time - init_time) < 30000)
+  {
+    if (Serial.available() > 0) 
+    {
+      char inputChar = Serial.read(); // Read a character from the serial input
+      Serial.println(inputChar);
+      if (inputChar == 'n')
       {
-        if (Serial.available() > 0) 
+        Serial.println("Motors");
+        Serial.flush();
+        results[trials][0] = braille_codes_dec[randomNumber]; // Convert 1 char to integer
+        
+        m1 = braille_codes[randomNumber][0] - '0'; // Convert 1 char to integer
+        m2 = braille_codes[randomNumber][1] - '0'; // Convert 2 char to integer
+        m3 = braille_codes[randomNumber][2] - '0'; // Convert 3 char to integer
+        m4 = braille_codes[randomNumber][3] - '0'; // Convert 4 char to integer
+    
+        vibration_control(m1,m2,m3,m4);
+  
+        int count = 0;
+        Serial.flush();
+        char inputChar = Serial.read();
+        while(count < 1)
         {
-          char inputChar = Serial.read(); // Read a character from the serial input
-          results[trials][1] = atoi(&inputChar);
-          count++;
+          if (Serial.available() > 0) 
+          {
+            char inputChar = Serial.read(); // Read a character from the serial input
+            results[trials][1] = atoi(&inputChar);
+            count++;
+          }
+        }
+        Serial.print(results[trials][0]);
+        Serial.print(',');
+        Serial.print(results[trials][1]);
+        trials++;
+      }
+      if (inputChar == 'e')
+      {
+        for (int i = 0; i<trials; i++)
+        {
+          Serial.print(results[i][0]);
+          Serial.print(',');
+          Serial.println(results[i][1]);
         }
       }
-      Serial.print(results[trials][0]);
-      Serial.print(',');
-      Serial.print(results[trials][1]);
-      trials++;
     }
-    if (inputChar == 'e')
+    
+  }
+  else
+  {
+    Serial.println("End");
+    for (int i = 0; i<trials; i++)
     {
-      for (int i = 0; i<trials; i++)
-      {
-        Serial.print(results[i][0]);
-        Serial.print(',');
-        Serial.println(results[i][1]);
-      }
+      Serial.print(results[i][0]);
+      Serial.print(',');
+      Serial.println(results[i][1]);
     }
   }
 }
