@@ -6,10 +6,14 @@ import HandTrackingModule as htm
 from HandTrackingModule import most_frequent
 from shared_memory_dict import SharedMemoryDict
 
-# Experiment details
+#------------------------------- EXPERIMENTAL DETAILS:-------------------------------------------------------------------
 subject_id = 0      # change it for every participant
+
+# sample conditions -- how big is the current sample size 
 sample_array = [5, 10, 15, 20]
-#loop through every sample value for each participant
+#------------------------------- EXPERIMENTAL DETAILS -------------------------------------------------------------------
+
+#loop through every sample value from the sample array for each participant
 for i in range(len(sample_array)):
     # shared memory for MediaPipe and force sensors
     smd = SharedMemoryDict(name='msg', size=1024)
@@ -34,7 +38,7 @@ for i in range(len(sample_array)):
     samples = 0
     sending_counter = 0
 
-    true_numbers = np.random.randint(10, size=2)
+    true_numbers = np.random.randint(10, size=100)
     signed_numbers = np.zeros_like(true_numbers)
 
     while True:
@@ -107,7 +111,7 @@ for i in range(len(sample_array)):
             summed_list.append(sum)
             samples = samples + 1
 
-            if samples >= 20:
+            if samples >= 20: # still wrong probably just comment out?- should probably work
                 number = most_frequent(summed_list)
                 signed_numbers[sending_counter] = number
                 # set shared memory variable
@@ -121,15 +125,20 @@ for i in range(len(sample_array)):
                 cv2.imshow("Image", img)
                 cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
                 cv2.waitKey(0)
+                # reset samples back to 0
                 samples = 0
+                # reset summed list
                 summed_list = []
-                if sending_counter == 1: #if all n numbers have been collected
+                if sending_counter == len(true_numbers)-1: #if all n (=100) samples have been collected --change #here should be the time of two min instead of all collected samples
                     signed_numbers[sending_counter] = number
+                    #create path for saving the data for one participant for a certain sample number
                     experiment_details_path = os.path.join("..", "Experiment_data", "subject_id{}_sample_size{}".format(subject_id,sample_array[i]))
+                    #save the numbers which need to be signed and the actual signed numbers together in a dictionarry 
                     dict = {"True numbers": true_numbers, "Signed Numbers": signed_numbers}
                     np.save(experiment_details_path, dict)
 
-                    if len(sample_array) == (i+1):
+                    # this if else is just for displaying text to know if recording of n numbers is done or if to continue... only  
+                    if len(sample_array) == (i+1): #all samples don't run into display error // show press enter to quit.. can be probably deleted since we finish recording when the time is over
                         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.putText(img, "recording participant {} finished".format(subject_id), (60, 375),
                                     cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 0), 8)
@@ -139,14 +148,16 @@ for i in range(len(sample_array)):
                         cv2.waitKey(0)
 
                         break
-                    else:
+                    else: # press enter as fast as possible to "send"/save more numbers in the signed array
                         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.putText(img, "Press enter to start a new recording with {} samples".format(sample_array[i+1])
                                     , (60, 375), cv2.FONT_HERSHEY_PLAIN, 2.5, (0, 0, 0),8)
                         cv2.imshow("Image", img)
                         cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
                         cv2.waitKey(0)
+                 
                         break
+                # in case the time is not over, we can add values 
                 else:
                     signed_numbers[sending_counter] = number
                     sending_counter = sending_counter + 1
