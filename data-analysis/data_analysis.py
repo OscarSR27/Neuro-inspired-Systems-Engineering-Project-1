@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from enum import Enum
 import math
+import re
 
 #%%
 # constants
@@ -15,7 +16,7 @@ N_TARGETS = 10 # targets: numbers 0-9 = 10 targets
 # TODO: list correct experiment options
 class Experiment(Enum):
     DUMMY = 'dummy'
-    MEDIAPIPE = 'mediapipe'
+    MEDIAPIPE = 'Mediapipe_Experiment_data'
     VIBROS_LEARNING = 'vibros_learning_curve'
     VIBROS_FINETUNING = 'vibros_finetuning'
     FSR_LEARNING = 'fsr_learning_curve'
@@ -26,7 +27,7 @@ class Experiment(Enum):
 #%%
 # variables, TODO: change settings to your needs
 # data
-experiment = Experiment.DUMMY.value # possible values specified in enum Experiment (see above)
+experiment = Experiment.MEDIAPIPE.value # possible values specified in enum Experiment (see above)
 file_type = ".csv"
 data_path = os.path.join("..", "data", experiment)
 
@@ -71,19 +72,67 @@ def get_parameters(experiment):
 
 
 #%%
-
-all_data = []
-all_itr = []
 parameters = get_parameters(experiment)
+all_data = []
+ids = []
+sample_sizes = []
 
 # load data
 for file_name in os.listdir(data_path):
     if file_name.endswith(file_type):
-        print("file_name")
+        print(file_name)
         file_path = os.path.join(data_path, file_name)
-        data = pd.read_csv(file_path, sep=';')
+        data = pd.read_csv(file_path, sep=',')
+        # Define regular expression patterns to extract numbers
+        pattern = r'\d+'
+        # Find all matches of the pattern in the string
+        matches = re.findall(pattern, file_name)
+        # Separate the matches into two lists
+        values = [int(match) for match in matches]  # Convert matches to integers
+        
+        # append lists
         all_data.append(data)
+        ids.append(values[0])
+        sample_sizes.append(values[1])
 
+
+num_subs = len(set(ids))
+all_itr = np.zeros((num_subs, len(parameters)))
+
+#%%
+for id, sample_size, data in zip(ids, sample_sizes, all_data):
+    ground_truth = data[cn_ground_truth].to_numpy()
+    responses = data[cn_response].to_numpy()
+    
+    # compute itr
+    trials = len(ground_truth)
+    p = compute_accuracy(ground_truth, responses)
+    itr = compute_itr_bpm(N_TARGETS, p, trials, EXP_TIME)
+
+    # store itr
+    idx_param = np.where(parameters == sample_size)[0][0]
+    all_itr[id, idx_param] = itr
+
+#%%
+mean_itrs = np.mean(all_itr, axis=0)
+std_err = np.std(all_itr, axis=0) / np.sqrt(num_subs)  # Standard error
+confidence_interval = 1.96 * std_err  # 95% confidence interval
+
+# plot itr
+fig, ax = plt.subplots()
+ax.scatter(parameters, mean_itrs)
+ax.errorbar(parameters, mean_itrs, confidence_interval)
+ax.set_xticks(parameters)
+ax.set_xlim(left=0)
+ax.set_ylim(0, math.ceil(max(mean_itrs)+max(confidence_interval)+5))
+ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
+ax.tick_params(axis='x', which='major', pad=10)
+ax.grid(which='major', axis='both', c='lightgray', ls='--')
+ax.set_xlabel("Number of samples")
+ax.set_ylabel("ITR [bpm]")
+plt.show()
+
+#%%
 # compute itr
 for data in all_data:
     ground_truth = data[cn_ground_truth].to_numpy()
