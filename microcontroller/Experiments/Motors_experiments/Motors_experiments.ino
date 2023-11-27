@@ -153,6 +153,7 @@ bool m1,m2,m3,m4 = false;
 unsigned long init_time;
 unsigned long current_time;
 bool first_iteration = true;
+bool end_flag = true;
 
 void vibration_control_seq (int motor_1,int motor_2,int motor_3,int motor_4);
 void vibration_control_simul(int motor_1,int motor_2,int motor_3,int motor_4);
@@ -171,8 +172,17 @@ std::mt19937 gen(rd());
 // Define the distribution for integers between 0 and 9
 std::uniform_int_distribution<> distrib(0, 9);
 int trials = 0;
+bool start_flag = false;
 void loop ()
 {
+  char start = Serial.read();
+  while(!start_flag)
+  {
+    if (Serial.available() > 0) 
+    {
+      start_flag = true;
+    }
+  }
   if(first_iteration)
   {
     init_time = millis();
@@ -185,43 +195,49 @@ void loop ()
   // Generate a random number
   int randomNumber = distrib(gen);
 
-  if ((current_time - init_time) < 30000)
+  if ((current_time - init_time) < 120000)
   {
-    if (Serial.available() > 0) 
+    Serial.println();
+    Serial.println("Motors");
+    Serial.flush();
+    results[trials][0] = braille_codes_dec[randomNumber]; // Convert 1 char to integer
+    Serial.println(braille_codes_dec[randomNumber]);
+    
+    m1 = braille_codes[randomNumber][0] - '0'; // Convert 1 char to integer
+    m2 = braille_codes[randomNumber][1] - '0'; // Convert 2 char to integer
+    m3 = braille_codes[randomNumber][2] - '0'; // Convert 3 char to integer
+    m4 = braille_codes[randomNumber][3] - '0'; // Convert 4 char to integer
+    //vibration_control_seq(m1,m2,m3,m4);
+    vibration_control_simul(m1,m2,m3,m4);
+
+    int count = 0;
+    Serial.flush();
+    char inputChar = Serial.read();
+    while(count < 1)
+    {
+      if (Serial.available() > 0) 
+      {
+        char inputChar = Serial.read(); // Read a character from the serial input
+        results[trials][1] = atoi(&inputChar);
+        count++;
+      }
+    }
+    Serial.print(results[trials][0]);
+    Serial.print(',');
+    Serial.print(results[trials][1]);
+    trials++; 
+  }
+  else
+  {
+    if (end_flag)
+    {
+      Serial.println();
+      Serial.println("End");
+      end_flag = false;
+    }
+    if (Serial.available() > 0)
     {
       char inputChar = Serial.read(); // Read a character from the serial input
-      Serial.println(inputChar);
-      if (inputChar == 'n')
-      {
-        Serial.println("Motors");
-        Serial.flush();
-        results[trials][0] = braille_codes_dec[randomNumber]; // Convert 1 char to integer
-        
-        m1 = braille_codes[randomNumber][0] - '0'; // Convert 1 char to integer
-        m2 = braille_codes[randomNumber][1] - '0'; // Convert 2 char to integer
-        m3 = braille_codes[randomNumber][2] - '0'; // Convert 3 char to integer
-        m4 = braille_codes[randomNumber][3] - '0'; // Convert 4 char to integer
-    
-        vibration_control_seq(m1,m2,m3,m4);
-        //vibration_control_simul(m1,m2,m3,m4);
-  
-        int count = 0;
-        Serial.flush();
-        char inputChar = Serial.read();
-        while(count < 1)
-        {
-          if (Serial.available() > 0) 
-          {
-            char inputChar = Serial.read(); // Read a character from the serial input
-            results[trials][1] = atoi(&inputChar);
-            count++;
-          }
-        }
-        Serial.print(results[trials][0]);
-        Serial.print(',');
-        Serial.print(results[trials][1]);
-        trials++;
-      }
       if (inputChar == 'e')
       {
         for (int i = 0; i<trials; i++)
@@ -230,18 +246,7 @@ void loop ()
           Serial.print(',');
           Serial.println(results[i][1]);
         }
-      }
-    }
-    
-  }
-  else
-  {
-    Serial.println("End");
-    for (int i = 0; i<trials; i++)
-    {
-      Serial.print(results[i][0]);
-      Serial.print(',');
-      Serial.println(results[i][1]);
+      }    
     }
   }
 }
@@ -249,16 +254,16 @@ void loop ()
 void vibration_control_seq(int motor_1,int motor_2,int motor_3,int motor_4)
 {
   digitalWrite ( motorPin1 , motor_1?HIGH:LOW );
-  delay (1000);
+  delay (250);
   digitalWrite ( motorPin1 , LOW );
   digitalWrite ( motorPin2 , motor_2?HIGH:LOW);
-  delay (1000);
+  delay (250);
   digitalWrite ( motorPin2 , LOW );
   digitalWrite ( motorPin3 , motor_3?HIGH:LOW);
-  delay (1000);
+  delay (250);
   digitalWrite ( motorPin3 , LOW );
   digitalWrite ( motorPin4 , motor_4?HIGH:LOW);
-  delay (1000);
+  delay (250);
   digitalWrite ( motorPin4 , LOW );
 }
 

@@ -1,12 +1,16 @@
+double thr1=0;
 double thr1=1000;
+double thr1=2000;
+double thr1=3000;
+double thr1=1000;
+
 double thr2=1.5;
 
 
-//Pins for force sensors
-int fsPin1 = 34; //A2
-int fsPin2 = 39; //A3
-int fsPin3 = 36; //A4
-int fsPin4 = 32; //GPIO 32
+int pin1 = 26;
+int pin2 = 25;
+int pin3 = 34;
+int pin4 = 39;
 
 int reading1 ;
 int voltage1 ;
