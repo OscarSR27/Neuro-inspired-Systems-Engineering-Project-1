@@ -9,13 +9,13 @@ from HandTrackingModule import most_frequent
 from shared_memory_dict import SharedMemoryDict
 
 #------------------------------- EXPERIMENTAL DETAILS:-------------------------------------------------------------------
-subject_id = 10      # change it for every participant
+subject_id = 4      # change it for every participant
 time_duration = 120    # This is the time for running one experiment
 #------------------------------------------------------------------------------------------------------------------------
 
 # sample conditions -- how big is the current sample size
 sample_array = [5, 10, 15, 20]
-sample_array = random.sample(sample_array, len(sample_array))
+# sample_array = random.sample(sample_array, len(sample_array))
 #loop through every sample value from the sample array for each participant
 for i in range(len(sample_array)):
     wCam, hCam = 1920, 1080
