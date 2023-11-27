@@ -154,8 +154,8 @@ unsigned long init_time;
 unsigned long current_time;
 bool first_iteration = true;
 
-void vibration_control (int motor_1,int motor_2,int motor_3,int motor_4);
-
+void vibration_control_seq (int motor_1,int motor_2,int motor_3,int motor_4);
+void vibration_control_simul(int motor_1,int motor_2,int motor_3,int motor_4);
 void setup ()
 {
   Serial.begin(9600);
@@ -202,7 +202,8 @@ void loop ()
         m3 = braille_codes[randomNumber][2] - '0'; // Convert 3 char to integer
         m4 = braille_codes[randomNumber][3] - '0'; // Convert 4 char to integer
     
-        vibration_control(m1,m2,m3,m4);
+        vibration_control_seq(m1,m2,m3,m4);
+        //vibration_control_simul(m1,m2,m3,m4);
   
         int count = 0;
         Serial.flush();
@@ -245,7 +246,7 @@ void loop ()
   }
 }
 
-void vibration_control(int motor_1,int motor_2,int motor_3,int motor_4)
+void vibration_control_seq(int motor_1,int motor_2,int motor_3,int motor_4)
 {
   digitalWrite ( motorPin1 , motor_1?HIGH:LOW );
   delay (1000);
@@ -258,5 +259,18 @@ void vibration_control(int motor_1,int motor_2,int motor_3,int motor_4)
   digitalWrite ( motorPin3 , LOW );
   digitalWrite ( motorPin4 , motor_4?HIGH:LOW);
   delay (1000);
+  digitalWrite ( motorPin4 , LOW );
+}
+
+void vibration_control_simul(int motor_1,int motor_2,int motor_3,int motor_4)
+{
+  digitalWrite ( motorPin1 , motor_1?HIGH:LOW);
+  digitalWrite ( motorPin2 , motor_2?HIGH:LOW);
+  digitalWrite ( motorPin3 , motor_3?HIGH:LOW);
+  digitalWrite ( motorPin4 , motor_4?HIGH:LOW);
+  delay (1000);
+  digitalWrite ( motorPin1 , LOW );
+  digitalWrite ( motorPin2 , LOW );
+  digitalWrite ( motorPin3 , LOW );
   digitalWrite ( motorPin4 , LOW );
 }
