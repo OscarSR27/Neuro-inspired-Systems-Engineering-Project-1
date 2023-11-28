@@ -175,7 +175,7 @@ void setup ()
   pinMode ( motorPin4 , OUTPUT );
 
   // Read from the floating analog pin
-  float seed = 766.876;
+  float seed = 7878.876;
 
   // Seed the random number generator
   gen.seed(seed);
@@ -282,7 +282,7 @@ void vibration_control_simul(int motor_1,int motor_2,int motor_3,int motor_4)
   digitalWrite ( motorPin2 , motor_2?HIGH:LOW);
   digitalWrite ( motorPin3 , motor_3?HIGH:LOW);
   digitalWrite ( motorPin4 , motor_4?HIGH:LOW);
-  delay (1000);
+  delay (250);
   digitalWrite ( motorPin1 , LOW );
   digitalWrite ( motorPin2 , LOW );
   digitalWrite ( motorPin3 , LOW );
