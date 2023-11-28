@@ -175,7 +175,7 @@ void setup ()
   pinMode ( motorPin4 , OUTPUT );
 
   // Read from the floating analog pin
-  float seed = 765.876;
+  float seed = 766.876;
 
   // Seed the random number generator
   gen.seed(seed);
@@ -216,8 +216,8 @@ void loop ()
     m2 = braille_codes[randomNumber][1] - '0'; // Convert 2 char to integer
     m3 = braille_codes[randomNumber][2] - '0'; // Convert 3 char to integer
     m4 = braille_codes[randomNumber][3] - '0'; // Convert 4 char to integer
-    vibration_control_seq(m1,m2,m3,m4);
-    //vibration_control_simul(m1,m2,m3,m4);
+    //vibration_control_seq(m1,m2,m3,m4);
+    vibration_control_simul(m1,m2,m3,m4);
 
     int count = 0;
     Serial.flush();

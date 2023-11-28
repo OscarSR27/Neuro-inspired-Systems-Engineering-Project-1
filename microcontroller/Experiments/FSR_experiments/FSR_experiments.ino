@@ -7,6 +7,9 @@ char braille_codes[][6] = {"0111","1000","1100","1010","1011","1001","1110","111
 int braille_codes_dec[] = {0,1,2,3,4,5,6,7,8,9};
 int results[100][2];
 
+std::mt19937 gen; // Declare the generator
+std::uniform_int_distribution<> distrib(0, 9); // Distribution
+
 int thr1=500;
 const int frames = 15;
 
@@ -49,9 +52,10 @@ void setup ()
   pinMode ( motorPin2 , OUTPUT );
   pinMode ( motorPin3 , OUTPUT );
   pinMode ( motorPin4 , OUTPUT );
+  float seed = 765.876;
+  // Seed the random number generator
+  gen.seed(seed);
 }
-std::random_device rd;
-std::mt19937 gen(rd());
 
 int trials = 0;
 bool first_iteration = true;
@@ -59,6 +63,8 @@ bool start_flag = false;
 bool end_flag = false;
 void loop ()
 {
+  int randomNumber = distrib(gen);
+  
   while(!start_flag)
   {
     if (Serial.available() > 0) 
@@ -74,11 +80,6 @@ void loop ()
     first_iteration = false;
   }
   current_time = millis();
-  // Define the distribution for integers between 0 and 9
-  std::uniform_int_distribution<> distrib(0, 9);
-
-  // Generate a random number
-  int randomNumber = distrib(gen);
 
   if ((current_time - init_time) < 120000)
   {
