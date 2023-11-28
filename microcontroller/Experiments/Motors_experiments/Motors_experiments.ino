@@ -134,6 +134,11 @@ char braille_codes[][6] = {"0111","1000","1100","1010","1011","1001","1110","111
 int braille_codes_dec[] = {0,1,2,3,4,5,6,7,8,9};
 int results[100][2];
 
+const int analogPin = 34; 
+
+std::mt19937 gen; // Declare the generator
+std::uniform_int_distribution<> distrib(0, 9); // Distribution
+
 //Pins for vibrotactile motors
 int motorPin1 = 13; // GPIO 13 for vibration motor 1
 int motorPin2 = 12; // GPIO 12 for vibration motor 2
@@ -157,6 +162,8 @@ bool end_flag = true;
 
 void vibration_control_seq (int motor_1,int motor_2,int motor_3,int motor_4);
 void vibration_control_simul(int motor_1,int motor_2,int motor_3,int motor_4);
+std::random_device rd;
+
 void setup ()
 {
   Serial.begin(9600);
@@ -166,15 +173,21 @@ void setup ()
   pinMode ( motorPin2 , OUTPUT );
   pinMode ( motorPin3 , OUTPUT );
   pinMode ( motorPin4 , OUTPUT );
+
+  // Read from the floating analog pin
+  float seed = 655.876;
+
+  // Seed the random number generator
+  gen.seed(seed);
 }
-std::random_device rd;
-std::mt19937 gen(rd());
-// Define the distribution for integers between 0 and 9
-std::uniform_int_distribution<> distrib(0, 9);
+  
 int trials = 0;
 bool start_flag = false;
+
+
 void loop ()
 {
+  int randomNumber = distrib(gen);
   char start = Serial.read();
   while(!start_flag)
   {
@@ -189,11 +202,7 @@ void loop ()
     first_iteration = false;
   }
   current_time = millis();
-  // Define the distribution for integers between 0 and 9
-  std::uniform_int_distribution<> distrib(0, 9);
-  
-  // Generate a random number
-  int randomNumber = distrib(gen);
+ 
 
   if ((current_time - init_time) < 120000)
   {
@@ -207,8 +216,8 @@ void loop ()
     m2 = braille_codes[randomNumber][1] - '0'; // Convert 2 char to integer
     m3 = braille_codes[randomNumber][2] - '0'; // Convert 3 char to integer
     m4 = braille_codes[randomNumber][3] - '0'; // Convert 4 char to integer
-    //vibration_control_seq(m1,m2,m3,m4);
-    vibration_control_simul(m1,m2,m3,m4);
+    vibration_control_seq(m1,m2,m3,m4);
+    //vibration_control_simul(m1,m2,m3,m4);
 
     int count = 0;
     Serial.flush();
