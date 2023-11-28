@@ -175,7 +175,7 @@ void setup ()
   pinMode ( motorPin4 , OUTPUT );
 
   // Read from the floating analog pin
-  float seed = 655.876;
+  float seed = 765.876;
 
   // Seed the random number generator
   gen.seed(seed);
