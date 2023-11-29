@@ -1,3 +1,4 @@
+# %%
 import numpy as np
 import cv2
 import time
@@ -6,6 +7,7 @@ import HandTrackingModule as htm
 from HandTrackingModule import most_frequent
 from shared_memory_dict import SharedMemoryDict
 
+# %%
 # shared memory for MediaPipe and force sensors
 smd = SharedMemoryDict(name='msg', size=1024)
 # TODO decide which variables are necessary

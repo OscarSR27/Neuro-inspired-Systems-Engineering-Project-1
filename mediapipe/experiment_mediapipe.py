@@ -9,7 +9,7 @@ from HandTrackingModule import most_frequent
 from shared_memory_dict import SharedMemoryDict
 
 #------------------------------- EXPERIMENTAL DETAILS:-------------------------------------------------------------------
-subject_id = 4      # change it for every participant
+subject_id = 5      # change it for every participant
 time_duration = 120    # This is the time for running one experiment
 #------------------------------------------------------------------------------------------------------------------------
 

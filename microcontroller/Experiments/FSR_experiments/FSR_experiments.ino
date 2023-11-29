@@ -7,8 +7,11 @@ char braille_codes[][6] = {"0111","1000","1100","1010","1011","1001","1110","111
 int braille_codes_dec[] = {0,1,2,3,4,5,6,7,8,9};
 int results[100][2];
 
-int thr1=1000;
-const int frames = 10;
+std::mt19937 gen; // Declare the generator
+std::uniform_int_distribution<> distrib(0, 9); // Distribution
+
+int thr1=500;
+const int frames = 15;
 
 //Pins for vibrotactile motors
 int motorPin1 = 13; // GPIO 13 for vibration motor 1
@@ -49,29 +52,37 @@ void setup ()
   pinMode ( motorPin2 , OUTPUT );
   pinMode ( motorPin3 , OUTPUT );
   pinMode ( motorPin4 , OUTPUT );
+  float seed = 765.876;
+  // Seed the random number generator
+  gen.seed(seed);
 }
-std::random_device rd;
-std::mt19937 gen(rd());
 
 int trials = 0;
 bool first_iteration = true;
+bool start_flag = false;
+bool end_flag = false;
 void loop ()
 {
+  int randomNumber = distrib(gen);
+  
+  while(!start_flag)
+  {
+    if (Serial.available() > 0) 
+    {
+      Serial.println("Start");
+      start_flag = true;
+    } 
+  }
+    
   if(first_iteration)
   {
     init_time = millis();
     first_iteration = false;
   }
   current_time = millis();
-  // Define the distribution for integers between 0 and 9
-  std::uniform_int_distribution<> distrib(0, 9);
 
-  // Generate a random number
-  int randomNumber = distrib(gen);
-
-  if ((current_time - init_time) < 30000)
+  if ((current_time - init_time) < 120000)
   {
-    Serial.println(current_time - init_time);
     if (Serial.available() > 0) 
     {
       char inputChar = Serial.read(); // Read a character from the serial input
@@ -86,6 +97,7 @@ void loop ()
         vibration_control(1,0,0,0);
         while (output[0] == '\0')
         {
+           force_sensors(thr1,frames,output);
            force_sensors(thr1,frames,output);
         }
         
@@ -118,12 +130,24 @@ void loop ()
   }
   else
   {
-    Serial.println("End");
-    for (int i = 0; i<trials; i++)
+    if(!end_flag)
     {
-      Serial.print(results[i][0]);
-      Serial.print(',');
-      Serial.println(results[i][1]);
+      Serial.println();
+      Serial.println("End");
+      end_flag = true;
+    }
+    if (Serial.available() > 0) 
+    {
+      char inputChar = Serial.read(); // Read a character from the serial input
+      if (inputChar == 'e')
+      {
+        for (int i = 0; i<trials; i++)
+        {
+          Serial.print(results[i][0]);
+          Serial.print(',');
+          Serial.println(results[i][1]);
+        }
+      } 
     }
   }
 }
@@ -134,6 +158,7 @@ void force_sensors(int threshold, int numReadings, char* result)
   int activeCount[4] = {0, 0, 0, 0}; // Counter array for active readings for each sensor
   int sensorPins[4] = {fsPin1, fsPin2, fsPin3, fsPin4}; // Array of sensor pins
 
+  memset(result, 0, 4);
   memset(result, '0', 4);
   
   for (int sensor = 0; sensor < 4; sensor++)
