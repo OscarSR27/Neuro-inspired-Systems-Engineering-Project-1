@@ -112,11 +112,11 @@ for i in range(len(sample_array)):
                 signed_numbers[sending_counter] = number    #save the number in the signed number array
 
                 #Plot on screen
-                cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
+                cv2.rectangle(img, (0, 0), (wCam, hCam), (169, 169, 169), cv2.FILLED)
                 cv2.putText(img, "Number sent: {} ".format(number), (60, 650), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 128), 8)
                 cv2.putText(img,"Get ready to show a new number", (60, 375), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 0), 8)
                 cv2.imshow("Image", img)
-                cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
+                cv2.rectangle(img, (0, wCam), (0, hCam), (169, 169, 169), cv2.FILLED)
                 cv2.waitKey(0)
 
                 # reset samples back to 0
@@ -147,21 +147,21 @@ for i in range(len(sample_array)):
 
                     # Conditional for displaying text to know if recording of n numbers is done or if to continue...
                     if len(sample_array) == (i+1): # all samples don't run into display error // show press enter to quit..
-                        cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
+                        cv2.rectangle(img, (0, 0), (wCam, hCam), (169, 169, 169), cv2.FILLED)
                         cv2.putText(img, "recording participant {} finished".format(subject_id), (60, 375),
                                     cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 0), 8)
                         cv2.putText(img, "press enter to quit", (60, 500), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 169), 8)
                         cv2.imshow("Image", img)
-                        cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
+                        cv2.rectangle(img, (0, wCam), (0, hCam), (169, 169, 169), cv2.FILLED)
                         cv2.waitKey(0)
                         break
 
                     else: # press enter as fast as possible to "send"/save more numbers in the signed array
-                        cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
+                        cv2.rectangle(img, (0, 0), (wCam, hCam), (169, 169, 169), cv2.FILLED)
                         cv2.putText(img, "Press enter to start a new recording with {} samples".format(sample_array[i+1])
                                     , (60, 375), cv2.FONT_HERSHEY_PLAIN, 2.5, (0, 0, 0),8)
                         cv2.imshow("Image", img)
-                        cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
+                        cv2.rectangle(img, (0, wCam), (0, hCam), (169, 169, 169), cv2.FILLED)
                         cv2.waitKey(0)
                         break
                 # in case the time is not over, we can add values
