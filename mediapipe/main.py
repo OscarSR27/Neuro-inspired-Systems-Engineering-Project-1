@@ -100,7 +100,7 @@ while True:
         summed_list.append(sum)
         counter = counter + 1
 
-        if counter >= 50:
+        if counter >= 15:
             number = most_frequent(summed_list)
             # set shared memory variable
             if smd['signed_number'] == None:
