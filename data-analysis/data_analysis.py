@@ -194,7 +194,7 @@ xtick_labels = get_xtick_labels(experiment)
 
 if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_LEARNING.value or experiment == Experiment.VIBROS_FINETUNING.value:
     if experiment == Experiment.VIBROS_FINETUNING.value:
-        plot_name = plot_name + "_simoultaneous"
+        plot_name = plot_name + "_simultaneous"
     mean_itrs = np.mean(all_itr, axis=0)
     std_err = np.std(all_itr, axis=0) / np.sqrt(num_subs)  # Standard error
     confidence_interval = 1.96 * std_err  # 95% confidence interval
