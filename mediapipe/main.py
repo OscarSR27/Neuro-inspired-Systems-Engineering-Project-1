@@ -110,6 +110,12 @@ while True:
             cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
             cv2.putText(img, "Number sent: {} ".format(number), (60, 650), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 128), 8)
             cv2.putText(img,"Get ready to show a new number", (60, 375), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 0), 8)
+
+            cv2.rectangle(img, (1000, 225), (1150, 425), (169, 169, 169), cv2.FILLED)
+            if smd['pressed_number'] != None:
+                cv2.putText(img, str(smd['pressed_number']), (1040, 375), cv2.FONT_HERSHEY_PLAIN, 8, (0, 0, 128), 20)
+            cv2.putText(img, "Received number:", (935, 175), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 3)
+
             cv2.imshow("Image", img)
             cv2.rectangle(img, (0, 1920), (0, 1080), (169, 169, 169), cv2.FILLED)
             cv2.waitKey(0)
@@ -120,6 +126,11 @@ while True:
     #display count inside the frame
     cv2.rectangle(img, (20, 225), (170, 425), (169, 169, 169), cv2.FILLED)
     cv2.putText(img, str(sum), (60, 375), cv2.FONT_HERSHEY_PLAIN, 8, (0, 0, 128), 20)
+
+    cv2.rectangle(img, (1000, 225), (1150, 425), (169, 169, 169), cv2.FILLED)
+    if smd['pressed_number'] != None:
+        cv2.putText(img, str(smd['pressed_number']), (1040, 375), cv2.FONT_HERSHEY_PLAIN, 8, (0, 0, 128), 20)
+    cv2.putText(img, "Received number:", (935, 175), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 3)
 
     # cTime = time.time()
     # fps = 1 / (cTime - pTime)
