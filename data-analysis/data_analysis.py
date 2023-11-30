@@ -19,7 +19,8 @@ class Experiment(Enum):
     VIBROS_LEARNING = 'vibrotactile_motors_learning_curve'
     VIBROS_FINETUNING = 'vibrotactile_motors_parameter_optimization'
     FSR_LEARNING = 'force_sensor_learning_curve'
-    FSR_FINETUNING = 'force_sensors_parameter_optimization'
+    FSR_FINETUNING_SAMPLES = 'force_sensor_sample_size_optimization'
+    FSR_FINETUNING_PRESSURE = 'force_sensor_pressure_threshold_optimization'
     #MEDIA_2_VIBROS = 'mediapipe_to_vibros'
     #FSR_2_MEDIA = 'fsr_to_mediapipe'
 
@@ -28,7 +29,7 @@ class Experiment(Enum):
 #%%
 # specify variables for data analysis, TODO: change settings to your needs
 # data
-experiment = Experiment.FSR_LEARNING.value # possible values specified in enum Experiment (see above)
+experiment = Experiment.FSR_FINETUNING_PRESSURE.value # possible values specified in enum Experiment (see above)
 data_path = os.path.join("..", "data", experiment)
 
 # set correct data file extension
@@ -74,30 +75,40 @@ def compute_itr_bpm(n, p, trials, time):
 # get the parameters of the experiment
 # TODO: adjust name of experiments
 def get_parameters(experiment):
-    if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_FINETUNING.value:
+    if experiment == Experiment.MEDIAPIPE.value:
         parameters = np.array([5, 10, 15, 20])
     elif experiment == Experiment.VIBROS_LEARNING.value or experiment == Experiment.FSR_LEARNING.value:
         parameters = np.array(["pre_train", "session1", "session2", "session3", "post_train"])
     elif experiment == Experiment.VIBROS_FINETUNING.value:
         parameters = np.array([250, 500, 750, 1000])
+    elif experiment == Experiment.FSR_FINETUNING_SAMPLES.value:
+        parameters = np.array([5, 10, 25])
+    elif experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
+        parameters = np.array([150, 250, 500, 1000])
     return parameters
 
 def get_xtick_labels(experiment):
-    if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_FINETUNING.value:
-        parameters = np.array([5, 10, 15, 20])
+    if experiment == Experiment.MEDIAPIPE.value:
+        ticklabels = np.array([5, 10, 15, 20])
     elif experiment == Experiment.VIBROS_LEARNING.value or experiment == Experiment.FSR_LEARNING.value:
-        parameters = np.array(["pre", "training 1", "training 2", "training 3", "post"])
+        ticklabels = np.array(["pre", "training 1", "training 2", "training 3", "post"])
     elif experiment == Experiment.VIBROS_FINETUNING.value:
-        parameters = np.array([250, 500, 750, 1000])
-    return parameters
+        ticklabels = np.array([250, 500, 750, 1000])
+    elif experiment == Experiment.FSR_FINETUNING_SAMPLES.value:
+        ticklabels = np.array([5, 10, 25])
+    elif experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
+        ticklabels = np.array([150, 250, 500, 1000])
+    return ticklabels
 
 def get_xlabel(experiment):
-    if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_FINETUNING.value:
+    if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_FINETUNING_SAMPLES.value:
         xlabel = "Number of samples"
     elif experiment == Experiment.VIBROS_LEARNING.value or experiment == Experiment.FSR_LEARNING.value:
         xlabel = "Recording session"
     elif experiment == Experiment.VIBROS_FINETUNING.value:
         xlabel = "Stimulation duration [ms]"
+    elif experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
+        xlabel = "Voltage [$\mu$V]"
     return xlabel
 
 # plot itr
@@ -149,7 +160,7 @@ for file_name in os.listdir(data_path):
         data = pd.read_csv(file_path, sep=',')
 
         # extract subject id and condition
-        if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.VIBROS_FINETUNING.value:
+        if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.VIBROS_FINETUNING.value or experiment == Experiment.FSR_FINETUNING_SAMPLES.value or experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
             pattern = r'\d+'
             matches = re.findall(pattern, file_name)
             id = int(matches[0])
@@ -184,7 +195,10 @@ for id, cond, data in zip(ids, conditions, all_data):
 
     # store itr
     idx_param = np.where(parameters == cond)[0][0]
-    all_itr[id, idx_param] = itr
+    if experiment == Experiment.FSR_FINETUNING_SAMPLES.value or experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
+        all_itr[id-1, idx_param] = itr
+    else:
+        all_itr[id, idx_param] = itr
 
 #%%
 # plotting
@@ -192,9 +206,7 @@ plot_name = "ITR_" + experiment
 xlabel = get_xlabel(experiment)
 xtick_labels = get_xtick_labels(experiment)
 
-if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_LEARNING.value or experiment == Experiment.VIBROS_FINETUNING.value:
-    if experiment == Experiment.VIBROS_FINETUNING.value:
-        plot_name = plot_name + "_simultaneous"
+if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_LEARNING.value:
     mean_itrs = np.mean(all_itr, axis=0)
     std_err = np.std(all_itr, axis=0) / np.sqrt(num_subs)  # Standard error
     confidence_interval = 1.96 * std_err  # 95% confidence interval
@@ -204,4 +216,9 @@ if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_LEAR
 elif experiment == Experiment.VIBROS_LEARNING.value:
     plot = plot_itr(all_itr, xtick_labels, xlabel, plot_name, labels=["Simultaneous stimulation", "Sequential stimulation"])
     plt.show()
+
+elif experiment == Experiment.VIBROS_FINETUNING.value or experiment == Experiment.FSR_FINETUNING_SAMPLES.value or experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
+    if experiment == Experiment.VIBROS_FINETUNING.value:
+        plot_name = plot_name + "_simultaneous"
+    plot = plot_itr(all_itr, xtick_labels, xlabel, plot_name)
 
