@@ -7,6 +7,7 @@ import pandas as pd
 from enum import Enum
 import math
 import re
+import sys
 
 #%%
 # constants
@@ -21,15 +22,15 @@ class Experiment(Enum):
     FSR_LEARNING = 'force_sensor_learning_curve'
     FSR_FINETUNING_SAMPLES = 'force_sensor_sample_size_optimization'
     FSR_FINETUNING_PRESSURE = 'force_sensor_pressure_threshold_optimization'
-    #MEDIA_2_VIBROS = 'mediapipe_to_vibros'
-    #FSR_2_MEDIA = 'fsr_to_mediapipe'
+    MEDIA_2_VIBROS = 'MediaPipe_VTM_ITR'
+    FSR_2_MEDIA = 'FS_UDP_ITR'
 
 
 
 #%%
 # specify variables for data analysis, TODO: change settings to your needs
 # data
-experiment = Experiment.FSR_FINETUNING_PRESSURE.value # possible values specified in enum Experiment (see above)
+experiment = Experiment.MEDIAPIPE.value # possible values specified in enum Experiment (see above)
 data_path = os.path.join("..", "data", experiment)
 
 # set correct data file extension
@@ -42,14 +43,17 @@ else:
 cn_ground_truth = "ground_truth"
 cn_response = "response"
 
-# output plot directory
+# output directories
 plot_directory = "plots"
+accuracy_directory = "accuracy_results"
+itr_directory = "itr_results"
+
+# create directories if they do not exist yet
+for directory in [plot_directory, accuracy_directory, itr_directory]:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 
-
-# create directory for plots if it does not exist yet
-if not os.path.exists(plot_directory):
-    os.makedirs(plot_directory)
 #%%
 # functions
 # calculate accuracy
@@ -85,7 +89,14 @@ def get_parameters(experiment):
         parameters = np.array([5, 10, 25])
     elif experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
         parameters = np.array([150, 250, 500, 1000])
+    else:
+        parameters = np.array(["value"])
     return parameters
+
+def save_results(data, column_names, ids, filename):
+    df = pd.DataFrame(data=data, columns=column_names, index=ids)
+    df.index.name = 'id'
+    df.to_csv(filename + '.txt')
 
 def get_xtick_labels(experiment):
     if experiment == Experiment.MEDIAPIPE.value:
@@ -109,6 +120,8 @@ def get_xlabel(experiment):
         xlabel = "Stimulation duration [ms]"
     elif experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
         xlabel = "Voltage [$\mu$V]"
+    else:
+        xlabel = ""
     return xlabel
 
 # plot itr
@@ -153,7 +166,7 @@ ids = []
 conditions = []
 
 #%% generic code
-for file_name in os.listdir(data_path):
+for i, file_name in enumerate(os.listdir(data_path)):
     if file_name.endswith(file_type):
         print(file_name)
         file_path = os.path.join(data_path, file_name)
@@ -165,12 +178,16 @@ for file_name in os.listdir(data_path):
             matches = re.findall(pattern, file_name)
             id = int(matches[0])
             cond = int(matches[1])
-            #values = [int(match) for match in matches]
+
         elif experiment == Experiment.VIBROS_LEARNING.value or experiment == Experiment.FSR_LEARNING.value:
             pattern = r'subject_id(\d+)_(pre_train|session\d+|post_train)'
             match = re.match(pattern, file_name)
             id = int(match.group(1))
             cond = match.group(2)
+        
+        elif experiment == Experiment.FSR_2_MEDIA.value or experiment == Experiment.MEDIA_2_VIBROS.value:
+            id = i
+            cond = "value"
 
         # append lists
         all_data.append(data)
@@ -181,6 +198,7 @@ for file_name in os.listdir(data_path):
 #%%
 # calculate the ITR
 num_subs = len(set(ids))
+all_accuracy = np.zeros((num_subs, len(parameters)))
 all_itr = np.zeros((num_subs, len(parameters)))
 
 # calculate itrs
@@ -196,9 +214,26 @@ for id, cond, data in zip(ids, conditions, all_data):
     # store itr
     idx_param = np.where(parameters == cond)[0][0]
     if experiment == Experiment.FSR_FINETUNING_SAMPLES.value or experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
+        all_accuracy[id-1, idx_param] = p
         all_itr[id-1, idx_param] = itr
     else:
+        all_accuracy[id, idx_param] = p
         all_itr[id, idx_param] = itr
+
+#%% 
+# store results in file
+# accuracy
+accuracy_file = os.path.join(accuracy_directory, 'ACC_' + experiment)
+save_results(all_accuracy, parameters, set(ids), accuracy_file)
+
+# itr
+itr_file = os.path.join(itr_directory, 'ITR_' + experiment)
+save_results(all_itr, parameters, set(ids), itr_file)
+
+#%%
+# no plotting for one-directional communication
+if experiment == Experiment.MEDIA_2_VIBROS.value or experiment == Experiment.FSR_2_MEDIA.value:
+    sys.exit()
 
 #%%
 # plotting
@@ -210,6 +245,7 @@ if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_LEAR
     mean_itrs = np.mean(all_itr, axis=0)
     std_err = np.std(all_itr, axis=0) / np.sqrt(num_subs)  # Standard error
     confidence_interval = 1.96 * std_err  # 95% confidence interval
+    save_results(np.atleast_2d(mean_itrs), parameters, np.array(['mean']), itr_file+'_mean')
     plot = plot_itr(np.atleast_2d(mean_itrs), xtick_labels, xlabel, plot_name, confidence_interval=np.atleast_2d(confidence_interval))
     plt.show()
 
