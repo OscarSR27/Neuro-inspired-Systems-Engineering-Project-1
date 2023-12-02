@@ -30,7 +30,7 @@ class Experiment(Enum):
 #%%
 # specify variables for data analysis, TODO: change settings to your needs
 # data
-experiment = Experiment.MEDIAPIPE.value # possible values specified in enum Experiment (see above)
+experiment = Experiment.FSR_2_MEDIA.value # possible values specified in enum Experiment (see above)
 data_path = os.path.join("..", "data", experiment)
 
 # set correct data file extension
@@ -49,9 +49,12 @@ accuracy_directory = "accuracy_results"
 itr_directory = "itr_results"
 
 # create directories if they do not exist yet
+def create_dir(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
 for directory in [plot_directory, accuracy_directory, itr_directory]:
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    create_dir(directory)
 
 
 #%%
@@ -64,7 +67,9 @@ def compute_accuracy(ground_truth, responses):
     print("number of correct responses:", n_correct)
     accuracy = n_correct / n_total
     print("accuracy:", accuracy)
+
     return accuracy
+
 
 # calculate ITR
 def compute_itr_bpm(n, p, trials, time):
@@ -74,7 +79,22 @@ def compute_itr_bpm(n, p, trials, time):
         b = np.log2(n) + p*np.log2(p) + (1-p)*np.log2((1-p)/(n-1))
     information_transfer = b * trials
     itr = information_transfer / time
+
     return itr
+
+
+# quantify mismatches
+def quantify_mismatches(ground_truth, responses, num_targets=N_TARGETS):
+    occurrences = np.zeros(num_targets, dtype=int)
+    mismatches = np.zeros(num_targets, dtype=int)
+
+    for i in range(10):
+        occurrences[i] = len(ground_truth[ground_truth == i])
+        mismatch_count = np.sum((ground_truth == i) & (responses != i))
+        mismatches[i] = mismatch_count
+
+    return occurrences, mismatches
+
 
 # get the parameters of the experiment
 # TODO: adjust name of experiments
@@ -86,17 +106,20 @@ def get_parameters(experiment):
     elif experiment == Experiment.VIBROS_FINETUNING.value:
         parameters = np.array([250, 500, 750, 1000])
     elif experiment == Experiment.FSR_FINETUNING_SAMPLES.value:
-        parameters = np.array([5, 10, 25])
+        parameters = np.array([5, 10, 15, 25])
     elif experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
         parameters = np.array([150, 250, 500, 1000])
     else:
         parameters = np.array(["value"])
+
     return parameters
+
 
 def save_results(data, column_names, ids, filename):
     df = pd.DataFrame(data=data, columns=column_names, index=ids)
     df.index.name = 'id'
     df.to_csv(filename + '.txt')
+
 
 def get_xtick_labels(experiment):
     if experiment == Experiment.MEDIAPIPE.value:
@@ -106,10 +129,12 @@ def get_xtick_labels(experiment):
     elif experiment == Experiment.VIBROS_FINETUNING.value:
         ticklabels = np.array([250, 500, 750, 1000])
     elif experiment == Experiment.FSR_FINETUNING_SAMPLES.value:
-        ticklabels = np.array([5, 10, 25])
+        ticklabels = np.array([5, 10, 15, 25])
     elif experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
         ticklabels = np.array([150, 250, 500, 1000])
+
     return ticklabels
+
 
 def get_xlabel(experiment):
     if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_FINETUNING_SAMPLES.value:
@@ -122,7 +147,9 @@ def get_xlabel(experiment):
         xlabel = "Voltage [$\mu$V]"
     else:
         xlabel = ""
+
     return xlabel
+
 
 # plot itr
 def plot_itr(itrs, parameters, x_label, filename, # required
@@ -153,9 +180,78 @@ def plot_itr(itrs, parameters, x_label, filename, # required
     ax.set_xlabel(x_label, fontsize=fontsize)
     ax.set_ylabel("ITR [bpm]", fontsize=fontsize)
     if labels is not None:
-        ax.legend(loc='right')
+        ax.legend(loc='right', fontsize=fontsize)
     plt.tight_layout()
-    plt.savefig(os.path.join(plot_directory, filename + plot_format))
+    path = os.path.join(plot_directory, 'itr')
+    create_dir(path)
+    plt.savefig(os.path.join(path, filename + plot_format))
+
+    return fig
+
+
+# plot itr and accuracy in same plot
+def plot_itr_acc(itrs, accs, parameters, x_label, filename, # required
+                 confidence_interval=None, labels = None, # optional params
+                fontsize=14, plot_directory=plot_directory, plot_format=".pdf"): # plot params
+    fig, ax = plt.subplots()
+    ax2 = ax.twinx()
+    x_axis = range(1,len(parameters)+1)
+    lns = []
+    print(x_axis)
+    for i in range(itrs.shape[0]):
+        data = itrs[i]
+        print(data)
+        if labels is not None:
+            line, = ax.plot(x_axis, data, marker='o', label= 'ITR '+labels[i])
+        else:
+            line, = ax.plot(x_axis, data, marker='o')
+        line_color = line.get_color()
+        line2, = ax2.plot(x_axis, accs[i], marker='o', c=line_color, alpha=.5, label='Accuracy '+labels[i])
+        lns.extend([line, line2])
+        if confidence_interval is not None:
+            ax.errorbar(x_axis, data, confidence_interval[i], c=line_color)
+    if confidence_interval is not None:
+        ax.set_ylim(0, math.ceil(np.max(itrs)+np.max(confidence_interval)+5))
+    else:
+        ax.set_ylim(0, math.ceil(np.max(itrs)+5))
+    ax2.set_ylim(0,1.05)
+    ax.set_xticks(x_axis)
+    ax.set_xticklabels(parameters, fontsize=fontsize)
+    ax.tick_params(axis='both', which='both', direction='in', top=True, labelsize=fontsize)
+    ax.tick_params(axis='x', which='major', pad=10)
+    ax2.tick_params(axis='both', which='both', direction='in', right=True, labelsize=fontsize)
+    ax.grid(which='major', axis='both', c='lightgray', ls='--')
+    ax.set_xlabel(x_label, fontsize=fontsize)
+    ax.set_ylabel("ITR [bpm]", fontsize=fontsize)
+    ax2.set_ylabel("Accuracy", fontsize=fontsize)
+    if labels is not None:
+        all_labels = [l.get_label() for l in lns]
+        ax.legend(lns, all_labels, loc='lower right', fontsize=fontsize)
+    plt.tight_layout()
+    path = os.path.join(plot_directory, 'itr-with-acc')
+    create_dir(path)
+    plt.savefig(os.path.join(path , 'ACC_' + filename + plot_format))
+
+    return fig
+
+
+def plot_mismatches(mismatches_percent, filename, # required
+                    fontsize=14, plot_directory=plot_directory, plot_format=".pdf"): # optional
+    x_axis = range(0,len(mismatches_percent))
+    fig, ax = plt.subplots()
+    ax.bar(x_axis, mismatches_percent)
+    ax.set_xticks(x_axis)
+    ax.set_ylim(0,100.5)
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True, labelsize=fontsize)
+    ax.tick_params(axis='x', which='major', pad=10)
+    ax.grid(which='major', axis='y', c='lightgray', ls='--')
+    ax.set_xlabel("Target", fontsize=fontsize)
+    ax.set_ylabel("Misclassifications [%]", fontsize=fontsize)
+    plt.tight_layout()
+    path = os.path.join(plot_directory, 'misclassifications')
+    create_dir(path)
+    plt.savefig(os.path.join(path, filename + plot_format))
+
     return fig
 
 
@@ -196,29 +292,35 @@ for i, file_name in enumerate(os.listdir(data_path)):
 
 
 #%%
-# calculate the ITR
+# computations: accuracy, ITR, mismatches
 num_subs = len(set(ids))
 all_accuracy = np.zeros((num_subs, len(parameters)))
 all_itr = np.zeros((num_subs, len(parameters)))
+all_misses = np.zeros((num_subs, len(parameters), N_TARGETS))
 
-# calculate itrs
 for id, cond, data in zip(ids, conditions, all_data):
     ground_truth = data[cn_ground_truth].to_numpy()
     responses = data[cn_response].to_numpy()
     
-    # compute itr
+    # compute accuracy and ITR
     trials = len(ground_truth)
     p = compute_accuracy(ground_truth, responses)
     itr = compute_itr_bpm(N_TARGETS, p, trials, EXP_TIME)
+    # compute missclassifications in %
+    occurrences, misclassifications = quantify_mismatches(ground_truth, responses, N_TARGETS)
+    percent_wrong = misclassifications / occurrences * 100
 
-    # store itr
+    # store values
     idx_param = np.where(parameters == cond)[0][0]
     if experiment == Experiment.FSR_FINETUNING_SAMPLES.value or experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
         all_accuracy[id-1, idx_param] = p
         all_itr[id-1, idx_param] = itr
+        all_misses[id-1, idx_param] = percent_wrong
     else:
         all_accuracy[id, idx_param] = p
         all_itr[id, idx_param] = itr
+        all_misses[id, idx_param] = percent_wrong
+
 
 #%% 
 # store results in file
@@ -230,27 +332,45 @@ save_results(all_accuracy, parameters, set(ids), accuracy_file)
 itr_file = os.path.join(itr_directory, 'ITR_' + experiment)
 save_results(all_itr, parameters, set(ids), itr_file)
 
+
 #%%
-# no plotting for one-directional communication
+# plot misclassifications
+plot_name = "MISS_" + experiment
+if experiment == Experiment.VIBROS_LEARNING.value:
+    for i, cond in enumerate(parameters):
+        for id in set(ids):
+            plot = plot_mismatches(all_misses[id, i], f'{plot_name}_id{id}_{cond}')
+else:
+    mean_misses = np.mean(all_misses, axis=0)
+    print(mean_misses)
+    for i, cond in enumerate(parameters):
+        plot = plot_mismatches(mean_misses[i], f'{plot_name}_{cond}')
+        plt.show()
+
+
+#%%
+# no ITR plotting for one-directional communication
 if experiment == Experiment.MEDIA_2_VIBROS.value or experiment == Experiment.FSR_2_MEDIA.value:
     sys.exit()
 
 #%%
-# plotting
+# ITR (+ accuracy) plotting
 plot_name = "ITR_" + experiment
 xlabel = get_xlabel(experiment)
 xtick_labels = get_xtick_labels(experiment)
 
 if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_LEARNING.value:
     mean_itrs = np.mean(all_itr, axis=0)
-    std_err = np.std(all_itr, axis=0) / np.sqrt(num_subs)  # Standard error
-    confidence_interval = 1.96 * std_err  # 95% confidence interval
+    std_err_itr = np.std(all_itr, axis=0) / np.sqrt(num_subs)  # Standard error
+    ci_itr = 1.96 * std_err_itr  # 95% confidence interval
     save_results(np.atleast_2d(mean_itrs), parameters, np.array(['mean']), itr_file+'_mean')
-    plot = plot_itr(np.atleast_2d(mean_itrs), xtick_labels, xlabel, plot_name, confidence_interval=np.atleast_2d(confidence_interval))
+    plot = plot_itr(np.atleast_2d(mean_itrs), xtick_labels, xlabel, plot_name, confidence_interval=np.atleast_2d(ci_itr))
     plt.show()
 
 elif experiment == Experiment.VIBROS_LEARNING.value:
     plot = plot_itr(all_itr, xtick_labels, xlabel, plot_name, labels=["Simultaneous stimulation", "Sequential stimulation"])
+    plt.show()
+    plot_v2 = plot_itr_acc(all_itr, all_accuracy, xtick_labels, xlabel, plot_name, labels=["Simultaneous stimulation", "Sequential stimulation"])
     plt.show()
 
 elif experiment == Experiment.VIBROS_FINETUNING.value or experiment == Experiment.FSR_FINETUNING_SAMPLES.value or experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
