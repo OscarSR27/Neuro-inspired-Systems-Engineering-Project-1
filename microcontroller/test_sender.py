@@ -5,6 +5,7 @@ import socket
 # %%
 
 udp_ip = "192.168.4.1"  # IP del ESP32
+#udp_ip = "127.0.0.1"
 udp_port = 9999         # Puerto del ESP32
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

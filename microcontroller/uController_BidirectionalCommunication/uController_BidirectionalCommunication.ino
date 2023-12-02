@@ -13,9 +13,9 @@ int fsPin2 = 39; //A3
 int fsPin3 = 36; //A4
 int fsPin4 = 32; //GPIO 32
 
-int thr1=1000;
-int thr2=1.5;
+int thr1=250;
 const int numReadings = 10;
+const int delay_millis = 850;
 
 int reading1 ;
 int voltage1 ;
@@ -55,7 +55,6 @@ void sendUdpData(WiFiUDP &udp, const char *data, IPAddress ip, unsigned int port
 
 enum STATE 
 {
-    READ_INPUT,
     ROLE,
     READ,
     CONFIRM,
@@ -63,7 +62,7 @@ enum STATE
     WAIT_CONFIRMATION
 };
 
-STATE currentState = READ_INPUT;
+STATE currentState = ROLE;
 
 void setup ()
 {
@@ -91,41 +90,28 @@ void loop ()
   Serial.println (currentState);
   switch (currentState)
   {
-    case READ_INPUT:
-         Serial.println ("READ_INPUT");
-         //ToDo: Add delay before reading sensors? Vibrotactile feedback to indicate init of reading and end of reading? 1 motor starts, 2 motors end?
-         memset(result, 0, sizeof(result));//Set result array to null character
-         force_sensors(thr1,numReadings,result);
-         if (result[0] != '\0')
-         {
-            currentState = ROLE;
-            sendUdpData(Udp, result, clientIp, localPort);
-            Serial.println (result);
-            Serial.println ("ROLE");
-         }
-         break;
     case ROLE:
          packetSize = Udp.parsePacket();
-         read_role = packetSize==0?false:processUdpPacket(Udp, packetBuffer, 1000);
+         read_role = packetSize==0?false:processUdpPacket(Udp, packetBuffer, delay_millis);
          if (read_role)
          {
             Serial.println (packetBuffer);
             if (packetBuffer[0] == '1' && packetBuffer[1] == '0' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Receiver role code = 1000
             {
-              currentState = READ;
-              Serial.println ("READ");
-            }
-            else if (packetBuffer[0] == '0' && packetBuffer[1] == '1' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Sender role code = 0100
-            {
               currentState = SEND;
               Serial.println ("SEND");
+            }
+            else if (packetBuffer[0] == '1' && packetBuffer[1] == '1' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Sender role code = 0100
+            {
+              currentState = READ;
+              Serial.println ("READ");
             }
          }
          delay(2000);
          break;
     case READ:
          packetSize = Udp.parsePacket();
-         received = packetSize==0?false:processUdpPacket(Udp, packetBuffer, 1000);
+         received = packetSize==0?false:processUdpPacket(Udp, packetBuffer, delay_millis);
          if (received)
          {
             currentState = CONFIRM;
@@ -143,7 +129,7 @@ void loop ()
             sendUdpData(Udp, result, clientIp, localPort);
             Serial.println ("SEND");
          }
-         else if (result[0] == '0' && result[1] == '1' && result[2] == '0' && result[3] == '0') //Resend code = 0100
+         else if (result[0] == '1' && result[1] == '1' && result[2] == '0' && result[3] == '0') //Resend code = 0100
          {
             received = false;
             currentState = READ;
@@ -166,7 +152,7 @@ void loop ()
          break;
     case WAIT_CONFIRMATION:
          packetSize = Udp.parsePacket();
-         confirmation = packetSize==0?false:processUdpPacket(Udp, packetBuffer, 1000);
+         confirmation = packetSize==0?false:processUdpPacket(Udp, packetBuffer, delay_millis);
          if (confirmation)
          {
             if (packetBuffer[0] == '1' && packetBuffer[1] == '0' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Confirmation code = 1000
@@ -183,7 +169,7 @@ void loop ()
               bool confirmation = false;
               Serial.println ("READ");
             }
-            else if (packetBuffer[0] == '0' && packetBuffer[1] == '1' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Resend code = 0100
+            else if (packetBuffer[0] == '1' && packetBuffer[1] == '1' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Resend code = 1100
             {
               currentState = SEND;
               Serial.println ("SEND");
@@ -263,19 +249,13 @@ bool processUdpPacket(WiFiUDP &Udp, char *packetBuffer, int delay_millis)
 void vibration_control(int motor_1,int motor_2,int motor_3,int motor_4,int delay_millis)
 {
   digitalWrite ( motorPin1 , motor_1?HIGH:LOW );
-  delay (delay_millis);
-  digitalWrite ( motorPin1 , LOW );
-  
   digitalWrite ( motorPin2 , motor_2?HIGH:LOW);
-  delay (delay_millis);
-  digitalWrite ( motorPin2 , LOW );
-  
   digitalWrite ( motorPin3 , motor_3?HIGH:LOW);
-  delay (delay_millis);
-  digitalWrite ( motorPin3 , LOW );
-  
   digitalWrite ( motorPin4 , motor_4?HIGH:LOW);
   delay (delay_millis);
+  digitalWrite ( motorPin1 , LOW );
+  digitalWrite ( motorPin2 , LOW );
+  digitalWrite ( motorPin3 , LOW );
   digitalWrite ( motorPin4 , LOW );
 }
 
