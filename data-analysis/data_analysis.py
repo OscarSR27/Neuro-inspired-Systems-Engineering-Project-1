@@ -30,7 +30,7 @@ class Experiment(Enum):
 #%%
 # specify variables for data analysis, TODO: change settings to your needs
 # data
-experiment = Experiment.FSR_2_MEDIA.value # possible values specified in enum Experiment (see above)
+experiment = Experiment.FSR_FINETUNING_PRESSURE.value # possible values specified in enum Experiment (see above)
 data_path = os.path.join("..", "data", experiment)
 
 # set correct data file extension
@@ -144,7 +144,7 @@ def get_xlabel(experiment):
     elif experiment == Experiment.VIBROS_FINETUNING.value:
         xlabel = "Stimulation duration [ms]"
     elif experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
-        xlabel = "Voltage [$\mu$V]"
+        xlabel = "Voltage [mV]"
     else:
         xlabel = ""
 
