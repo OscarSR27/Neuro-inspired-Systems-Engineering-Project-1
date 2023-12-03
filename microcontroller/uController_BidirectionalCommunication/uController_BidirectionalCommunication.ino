@@ -13,6 +13,7 @@ int fsPin2 = 39; //A3
 int fsPin3 = 36; //A4
 int fsPin4 = 32; //GPIO 32
 
+//Thr for force sensors
 int thr1=250;
 const int numReadings = 10;
 const int delay_millis = 850;
@@ -53,6 +54,7 @@ bool processUdpPacket(WiFiUDP &Udp, char *packetBuffer, int delay_millis);
 void vibration_control(int motor_1,int motor_2,int motor_3,int motor_4,int delay_millis);
 void sendUdpData(WiFiUDP &udp, const char *data, IPAddress ip, unsigned int port);
 
+//States for finites state machine
 enum STATE 
 {
     ROLE,
@@ -62,6 +64,7 @@ enum STATE
     WAIT_CONFIRMATION
 };
 
+//Initial state
 STATE currentState = ROLE;
 
 void setup ()
@@ -75,6 +78,7 @@ void setup ()
   pinMode ( motorPin4 , OUTPUT );
 }
 
+//Set flags for the FSM
 int packetSize = 0;
 char result[5] = {0};//Initialize result with null character
 bool start_communication = false;
@@ -95,6 +99,7 @@ void loop ()
          read_role = packetSize==0?false:processUdpPacket(Udp, packetBuffer, delay_millis);
          if (read_role)
          {
+          //Assign role depending of what is received from MediaPipe module
             Serial.println (packetBuffer);
             if (packetBuffer[0] == '1' && packetBuffer[1] == '0' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Receiver role code = 1000
             {
@@ -109,7 +114,7 @@ void loop ()
          }
          delay(2000);
          break;
-    case READ:
+    case READ://Read message and transmit information to VTM system
          packetSize = Udp.parsePacket();
          received = packetSize==0?false:processUdpPacket(Udp, packetBuffer, delay_millis);
          if (received)
@@ -119,8 +124,7 @@ void loop ()
          }
          delay(2000);
          break;
-    case CONFIRM:
-         //ToDo: Add delay before reading sensors? Vibrotactile feedback to indicate init of reading and end of reading? 1 motor starts, 2 motors end?
+    case CONFIRM://Confirmation message from participant in FSR-VTM system. Then transmit the message via UDP
          memset(result, 0, sizeof(result));//Set result array to null character
          force_sensors(thr1,numReadings,result);
          if (result[0] == '1' && result[1] == '0' && result[2] == '0' && result[3] == '0') //Confirmation code = 1000
@@ -138,8 +142,7 @@ void loop ()
          }
          delay(2000);
          break;
-    case SEND:
-         //ToDo: Add delay before reading sensors? Vibrotactile feedback to indicate init of reading and end of reading? 1 motor starts, 2 motors end?
+    case SEND://Wait participant input message
          memset(result, 0, sizeof(result));//Set result array to null character
          force_sensors(thr1,numReadings,result);
          if (result[0] != '\0')
@@ -150,13 +153,14 @@ void loop ()
          }
          delay(2000);
          break;
-    case WAIT_CONFIRMATION:
+    case WAIT_CONFIRMATION://Wait confirmation from MediaPipe participant
          packetSize = Udp.parsePacket();
          confirmation = packetSize==0?false:processUdpPacket(Udp, packetBuffer, delay_millis);
          if (confirmation)
          {
             if (packetBuffer[0] == '1' && packetBuffer[1] == '0' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Confirmation code = 1000
             {
+              //Reset flags and switch to sender READ state in case MediaPipe participant confirm message
               currentState = READ;
               //Reset all control variables
               int packetSize = 0;
@@ -170,7 +174,7 @@ void loop ()
               Serial.println ("READ");
             }
             else if (packetBuffer[0] == '1' && packetBuffer[1] == '1' && packetBuffer[2] == '0' && packetBuffer[3] == '0')//Resend code = 1100
-            {
+            {//Return to SEND state in case MediaPipe user request a resend
               currentState = SEND;
               Serial.println ("SEND");
             }
@@ -190,6 +194,8 @@ void loop ()
   }
 }
 
+/*The debouncing functionality in this code helps filter out noise and stabilize sensor readings by taking multiple readings
+over time and considering a sensor as active only if it consistently exceeds a threshold in a majority of those readings.*/
 void force_sensors(int threshold, int numReadings, char* result)
 {
   bool anySensorActive = false;
@@ -229,6 +235,7 @@ void force_sensors(int threshold, int numReadings, char* result)
   Serial.println(result);
 }
 
+//This function is in charge of reading messages from UDP and convey the information to the VTM system
 bool processUdpPacket(WiFiUDP &Udp, char *packetBuffer, int delay_millis)
 {
     int len = Udp.read(packetBuffer, 255);
@@ -246,6 +253,7 @@ bool processUdpPacket(WiFiUDP &Udp, char *packetBuffer, int delay_millis)
     return true; // Return true if a packet was received and processed
 }
 
+//Function to drive vibrotactile motors in simultaneous mode
 void vibration_control(int motor_1,int motor_2,int motor_3,int motor_4,int delay_millis)
 {
   digitalWrite ( motorPin1 , motor_1?HIGH:LOW );
@@ -259,6 +267,7 @@ void vibration_control(int motor_1,int motor_2,int motor_3,int motor_4,int delay
   digitalWrite ( motorPin4 , LOW );
 }
 
+//Function to send data via UDP
 void sendUdpData(WiFiUDP &udp, const char *data, IPAddress ip, unsigned int port)
 {
     udp.beginPacket(ip, port);  // Start data transmission

@@ -1,4 +1,6 @@
 # %%
+
+#Import libraries
 import numpy as np
 import cv2
 import time
@@ -14,10 +16,11 @@ import random
 # %%
 # shared memory for MediaPipe and force sensors
 smd = SharedMemoryDict(name='msg', size=1024)
-# TODO decide which variables are necessary
+
 smd['signed_number'] = None
 smd['pressed_number'] = None
 
+#Adjust webcam size parameters
 wCam, hCam = 1920, 1080
 
 cap = cv2.VideoCapture(0)
@@ -56,6 +59,7 @@ STATE = States.READ_INPUT
 
 # %%
 
+# This function decode the force sensor receive message
 def decode_braille(force_array):
     number = None
     if force_array == "0111":
@@ -84,6 +88,7 @@ def decode_braille(force_array):
 
     return number
 
+#This function encode the decimal numbers into braille code
 def encode_braille(number):
     braille_encoding = {
         0: "0111",
@@ -100,6 +105,7 @@ def encode_braille(number):
 
     return braille_encoding.get(number, -1)
 
+#This function call mediaPipe program
 def process_hand_detection(img, detector, smd, tipIds, summed_list, counter):
     img, two_hands, right_hand = detector.findHands(img)
     landmarks_list_one = detector.findPosition(img, draw=False)
@@ -202,23 +208,17 @@ def process_hand_detection(img, detector, smd, tipIds, summed_list, counter):
             summed_list = []
     
     return img, summed_list, counter, sum, stop_mediapipe
-
-    # cTime = time.time()
-    # fps = 1 / (cTime - pTime)
-    # pTime = cTime
-    #
-    # #display FPS inside the frame
-    # cv2.putText(img, f'Frames per second =: {int(fps)}', (10, 50), cv2.FONT_HERSHEY_SIMPLEX,
-    #             1, (0, 0, 128), 3)
-    
     
 #
 # %%
 
+#Flags use in the FSM
 stop_mediapipe = -1
 role_assigned_flag = False
 while True:
-    if STATE == States.READ_INPUT:
+    if STATE == States.READ_INPUT:#This state has a double functionality. At the beginning of the game waits until mediaPipe participant decide to start the game.
+                                  #so it jumps unto the ROLE state. This happens just one time per game.
+                                  #Second functionality is as SEND state to send messages to the FSR-VTM system during game
         success, img = cap.read()
         img, summed_list, counter, sum, stop_mediapipe = process_hand_detection(img, detector, smd, tipIds, summed_list, counter)
         
@@ -236,7 +236,7 @@ while True:
                 STATE = States.WAIT_CONFIRMATION
                 data = encode_braille(sum) + '\0'  #Add null character
                 sock.sendto(data.encode(), (udp_ip, local_port))
-    if STATE == States.ROLE:
+    if STATE == States.ROLE:#Assign ROLE to participants and transmit the information locally and via UDP to both ends
         # Initialize the values
         values = [1, 2]
 
@@ -259,7 +259,7 @@ while True:
         cv2.imshow("Image", img_resized)
         cv2.waitKey(2000)
         
-    if STATE == States.READ:
+    if STATE == States.READ:#Wait message from FSR-VTM system the decode the Braille code received
         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
         cv2.putText(img, "Waiting message", (60, 375), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 128), 8)
         img_resized = cv2.resize(img, (desired_width, desired_height))
@@ -277,7 +277,7 @@ while True:
         cv2.imshow("Image", img_resized)
         cv2.waitKey(1000)
         STATE = States.CONFIRM
-    if STATE == States.CONFIRM:
+    if STATE == States.CONFIRM:#Ask for confirmation to MediaPipe participant. In case of confirmation change to SEND state or request a resend message
         confirm = input("Enter '1' to confirm, '2' to request message again: ")
         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
         cv2.imshow("Image", img_resized)
@@ -300,7 +300,8 @@ while True:
         img_resized = cv2.resize(img, (desired_width, desired_height))
         cv2.imshow("Image", img_resized)
         cv2.waitKey(1000)
-    if STATE == States.WAIT_CONFIRMATION:
+    if STATE == States.WAIT_CONFIRMATION:#Wait for message via UDP to know if FSR-VTM participant understood the message. In case of confirmation change to READ state,
+                                         #otherwise resend message
         cv2.rectangle(img, (0, 0), (1920, 1080), (169, 169, 169), cv2.FILLED)
         cv2.putText(img, "Waiting confirmation", (60, 375), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 128), 8)
         cv2.imshow("Image", img_resized)
@@ -328,5 +329,3 @@ while True:
 # Cleanup
 cap.release()
 cv2.destroyAllWindows()
-
-# %%
