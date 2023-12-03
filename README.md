@@ -3,6 +3,12 @@
 ## Run the fully integrated system
 
 ## Experiments
+# Mediapipe
+1. Open the experiment_mediapipe.py file
+2. Adjust parameters for experiment:
+    - Participants ID
+    - duration of recoring time (default = 120 s)
+3. Run the file in an interactive python environment   
 
 ## Data Analysis
 1. Open the file data-analysis/data_analysis.py
