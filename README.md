@@ -11,3 +11,7 @@
 4. Run the file in an interactive python environment
 
 The data analysis file analyses one experiment at a time. Please repeat steps 1-4, especially step 2 is important.
+
+## Authors
+NISE Group 2
+Members: Kunal Aggarwal, Katja Frey, Alexandra Samoylova, Oscar Soto Rivera, and Maria Zeller
