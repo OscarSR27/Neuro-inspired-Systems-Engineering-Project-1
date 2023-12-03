@@ -6,7 +6,9 @@ from collections import Counter
 
 
 class handDetector():
-    def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5):
+
+    # Initiazisation of the properties of the hand tracking and Mediapipe objects
+    def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5): 
         self.mode = mode
         self.maxHands = maxHands
         self.detectionCon = detectionCon
@@ -16,14 +18,14 @@ class handDetector():
         self.hands = self.mpHands.Hands(self.mode, self.maxHands,
                                         self.detectionCon, self.trackCon)
         self.mpDraw = mp.solutions.drawing_utils
-
+    # draw_landmarks function draws the landmarks and transforms the picture to RGB format if a hand is recognized
     def findHands(self, img, draw=True):
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
-        # print(results.multi_hand_landmarks)
         two_hands = False
 
         if self.results.multi_hand_landmarks:
+            # check for two hands
             if len(self.results.multi_hand_landmarks) == 2:
                 two_hands=True
             for handLms in self.results.multi_hand_landmarks:
@@ -32,49 +34,38 @@ class handDetector():
                                                self.mpHands.HAND_CONNECTIONS)
 
         RightHand1 = False
-        # RightHand2 = False
+        # find out which hand was first shown to the system (for later usage to properly count thumb)
         if self.results.multi_handedness:
             for idx, hand_handedness in enumerate(self.results.multi_handedness):
                 handedness_dict = MessageToDict(hand_handedness)
             whichHand1 = (handedness_dict['classification'][0]['label'])
-            print(whichHand1)
 
             if whichHand1 == "Left":
                 RightHand1 = True
             else:
                 RightHand1 = False
-            # if two_hands:
-            #     whichHand2 = (handedness_dict['classification'][1]['label'])
-            #     print(whichHand2)
-            #     if whichHand2 == "Left":
-            #         RightHand2 = False
-            #     else:
-            #         RightHand2 = True
-            #     return img, two_hands, [RightHand1,RightHand2]
-
         return img,two_hands, RightHand1
 
-    def findPosition(self, img, handNo=0, draw=True):
 
+    # method that loops over a list of landmarks, determines their dimensions, and saves their positions in the lmList
+    def findPosition(self, img, handNo=0, draw=True):
         lmList = []
         if self.results.multi_hand_landmarks:
             myHand = self.results.multi_hand_landmarks[handNo]
             for id, lm in enumerate(myHand.landmark):
-                # print(id, lm)
                 h, w, c = img.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
-                # print(id, cx, cy)
                 lmList.append([id, cx, cy])
                 if draw:
                     cv2.circle(img, (cx, cy), 15, (255, 0, 255), cv2.FILLED)
 
         return lmList
-
+# function to find the most frequnet number in an array
 def most_frequent(List):
     occurence_count = Counter(List)
     return occurence_count.most_common(1)[0][0]
 
-
+# main method that sets all the variables, creates a handDetecter instance, and calls the methods to make observations and display count and FPS
 def main():
     pTime = 0
     cTime = 0
