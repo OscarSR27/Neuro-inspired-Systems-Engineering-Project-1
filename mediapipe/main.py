@@ -104,8 +104,9 @@ while True:
             sum = fingers_count_one + fingers_count_two # sum both hands
         else:
             sum = fingers_count_one # sum one hand only
+        summed_list.append(sum)
         samples = samples + 1
-
+        
     # sample size set to 15 since Mediapipe experimental results showed that this will give the best ITR:
         if samples >= 15:
             # find the most frequent number in the samples array (summed_list)
