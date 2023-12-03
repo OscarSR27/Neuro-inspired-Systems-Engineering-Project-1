@@ -30,7 +30,7 @@ class Experiment(Enum):
 #%%
 # specify variables for data analysis, TODO: change settings to your needs
 # data
-experiment = Experiment.FSR_FINETUNING_PRESSURE.value # possible values specified in enum Experiment (see above)
+experiment = Experiment.FSR_2_MEDIA.value # possible values specified in enum Experiment (see above)
 data_path = os.path.join("..", "data", experiment)
 
 # set correct data file extension
@@ -115,17 +115,19 @@ def get_parameters(experiment):
     return parameters
 
 
+# write results to a .txt file
 def save_results(data, column_names, ids, filename):
     df = pd.DataFrame(data=data, columns=column_names, index=ids)
     df.index.name = 'id'
     df.to_csv(filename + '.txt')
 
 
+# for plotting: get labels for ticks on x-axis
 def get_xtick_labels(experiment):
     if experiment == Experiment.MEDIAPIPE.value:
         ticklabels = np.array([5, 10, 15, 20])
     elif experiment == Experiment.VIBROS_LEARNING.value or experiment == Experiment.FSR_LEARNING.value:
-        ticklabels = np.array(["pre", "training 1", "training 2", "training 3", "post"])
+        ticklabels = np.array(["pre", "train. 1", "train. 2", "train. 3", "post"])
     elif experiment == Experiment.VIBROS_FINETUNING.value:
         ticklabels = np.array([250, 500, 750, 1000])
     elif experiment == Experiment.FSR_FINETUNING_SAMPLES.value:
@@ -136,6 +138,7 @@ def get_xtick_labels(experiment):
     return ticklabels
 
 
+#for plotting: get x-label according to experimental condition
 def get_xlabel(experiment):
     if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_FINETUNING_SAMPLES.value:
         xlabel = "Number of samples"
@@ -154,7 +157,7 @@ def get_xlabel(experiment):
 # plot itr
 def plot_itr(itrs, parameters, x_label, filename, # required
              confidence_interval=None, labels = None, # optional params
-             fontsize=14, plot_directory=plot_directory, plot_format=".pdf"): # plot params
+             fontsize=17, plot_directory=plot_directory, plot_format=".pdf"): # plot params
     fig, ax = plt.subplots()
     x_axis = range(1,len(parameters)+1)
     print(x_axis)
@@ -191,8 +194,8 @@ def plot_itr(itrs, parameters, x_label, filename, # required
 
 # plot itr and accuracy in same plot
 def plot_itr_acc(itrs, accs, parameters, x_label, filename, # required
-                 confidence_interval=None, labels = None, # optional params
-                fontsize=14, plot_directory=plot_directory, plot_format=".pdf"): # plot params
+                 confidence_interval_itr=None, confidence_interval_acc=None, labels = None, # optional params
+                fontsize=17, plot_directory=plot_directory, plot_format=".pdf"): # plot params
     fig, ax = plt.subplots()
     ax2 = ax.twinx()
     x_axis = range(1,len(parameters)+1)
@@ -208,10 +211,12 @@ def plot_itr_acc(itrs, accs, parameters, x_label, filename, # required
         line_color = line.get_color()
         line2, = ax2.plot(x_axis, accs[i], marker='o', c=line_color, alpha=.5, label='Accuracy '+labels[i])
         lns.extend([line, line2])
-        if confidence_interval is not None:
-            ax.errorbar(x_axis, data, confidence_interval[i], c=line_color)
-    if confidence_interval is not None:
-        ax.set_ylim(0, math.ceil(np.max(itrs)+np.max(confidence_interval)+5))
+        if confidence_interval_itr is not None:
+            ax.errorbar(x_axis, data, confidence_interval_itr[i], c=line_color)
+        if confidence_interval_acc is not None:
+            ax2.errorbar(x_axis, accs[i], confidence_interval_acc[i], c=line_color, alpha=.5)
+    if confidence_interval_itr is not None:
+        ax.set_ylim(0, math.ceil(np.max(itrs)+np.max(confidence_interval_itr)+5))
     else:
         ax.set_ylim(0, math.ceil(np.max(itrs)+5))
     ax2.set_ylim(0,1.05)
@@ -235,8 +240,9 @@ def plot_itr_acc(itrs, accs, parameters, x_label, filename, # required
     return fig
 
 
+# plot misclassifications per target
 def plot_mismatches(mismatches_percent, filename, # required
-                    fontsize=14, plot_directory=plot_directory, plot_format=".pdf"): # optional
+                    fontsize=17, plot_directory=plot_directory, plot_format=".pdf"): # optional
     x_axis = range(0,len(mismatches_percent))
     fig, ax = plt.subplots()
     ax.bar(x_axis, mismatches_percent)
@@ -256,12 +262,14 @@ def plot_mismatches(mismatches_percent, filename, # required
 
 
 #%%
+# empty structures
 parameters = get_parameters(experiment)
 all_data = []
 ids = []
 conditions = []
 
-#%% generic code
+#%%
+# read in data, extract subject id + experimental condition
 for i, file_name in enumerate(os.listdir(data_path)):
     if file_name.endswith(file_type):
         print(file_name)
@@ -363,14 +371,23 @@ if experiment == Experiment.MEDIAPIPE.value or experiment == Experiment.FSR_LEAR
     mean_itrs = np.mean(all_itr, axis=0)
     std_err_itr = np.std(all_itr, axis=0) / np.sqrt(num_subs)  # Standard error
     ci_itr = 1.96 * std_err_itr  # 95% confidence interval
+
+    mean_acc = np.mean(all_accuracy, axis=0)
+    std_err_acc = np.std(all_accuracy, axis=0) / np.sqrt(num_subs)
+    ci_acc = 1.96 * std_err_acc
+
     save_results(np.atleast_2d(mean_itrs), parameters, np.array(['mean']), itr_file+'_mean')
+    save_results(np.atleast_2d(mean_acc), parameters, np.array(['mean']), accuracy_file+'_mean')
+
     plot = plot_itr(np.atleast_2d(mean_itrs), xtick_labels, xlabel, plot_name, confidence_interval=np.atleast_2d(ci_itr))
+    plt.show()
+    plot_v2 = plot_itr_acc(np.atleast_2d(mean_itrs), np.atleast_2d(mean_acc), xtick_labels, xlabel, plot_name, confidence_interval_itr=np.atleast_2d(ci_itr), confidence_interval_acc=np.atleast_2d(ci_acc), labels=[""])
     plt.show()
 
 elif experiment == Experiment.VIBROS_LEARNING.value:
-    plot = plot_itr(all_itr, xtick_labels, xlabel, plot_name, labels=["Simultaneous stimulation", "Sequential stimulation"])
+    plot = plot_itr(all_itr, xtick_labels, xlabel, plot_name, labels=["Simultaneous", "Sequential"])
     plt.show()
-    plot_v2 = plot_itr_acc(all_itr, all_accuracy, xtick_labels, xlabel, plot_name, labels=["Simultaneous stimulation", "Sequential stimulation"])
+    plot_v2 = plot_itr_acc(all_itr, all_accuracy, xtick_labels, xlabel, plot_name, labels=["Simultaneous", "Sequential"])
     plt.show()
 
 elif experiment == Experiment.VIBROS_FINETUNING.value or experiment == Experiment.FSR_FINETUNING_SAMPLES.value or experiment == Experiment.FSR_FINETUNING_PRESSURE.value:
