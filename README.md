@@ -13,5 +13,5 @@
 The data analysis file analyses one experiment at a time. Please repeat steps 1-4, especially step 2 is important.
 
 ## Authors
-NISE Group 2
+NISE Group 2 <br>
 Members: Kunal Aggarwal, Katja Frey, Alexandra Samoylova, Oscar Soto Rivera, and Maria Zeller
