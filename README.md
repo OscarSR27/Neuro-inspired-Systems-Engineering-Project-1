@@ -1,5 +1,10 @@
 # I can feel you sign: Bidirectional communication system between visually impaired and non-verbal individuals
 
+## Description
+Our project introduces a system designed to enhance digital communication for visually impaired and non-verbal individuals. By utilizing the MediaPipe hand gesture recognition library and vibrotactile motors, our solution converts video inputs into Braille patterns, and vice versa, without the need for extensive dataset training. This approach not only addresses the limitations of previous technologies but also fosters a more inclusive digital environment. Our prototype paves the way for user-friendly, bidirectional online interactions, leveraging advanced technology to reduce societal barriers for those with visual and speech impairments.
+
+Refer to [NISE_group-2_report.pdf](NISE_group-2_report.pdf) for a more detailed description.
+
 ## Run the fully integrated system
 
 1. Open the script [uController_BidirectionalCommunication.ino](microcontroller/uController_BidirectionalCommunication). Compile and upload to the micontroller.
